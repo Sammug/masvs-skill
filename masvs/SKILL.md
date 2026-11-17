@@ -13,28 +13,30 @@ Paths below are relative to this skill's directory. Run scripts with `python3 <s
 
 **A status is a claim to an auditor, and every claim needs evidence of a stated kind.**
 
+The three evidence kinds are defined here once and apply to every status:
+
 | `evidence_kind` | Meaning | Examples |
 |---|---|---|
-| `verified` | A script or command run against the **built artifact** or a live endpoint showed it | `inspect_apk.py`, `inspect_ipa.py`, an `aapt2` merged manifest, `check_pins.py --host` |
-| `inferred` | Read from source or config, not confirmed in a build | the source manifest, `build.gradle`, Dart code, `scan_source.py` matches, `check_pins.py --nsc` alone |
-| `manual` | Needs a person or device to exercise it | server-side auth, IDOR, hooking, runtime behaviour |
+| `verified` | A script or command run on a built artifact or a live endpoint showed it | `inspect_apk.py`, `inspect_ipa.py`, an `aapt2` merged manifest, `check_pins.py --host` |
+| `inferred` | Source, config or a scan showed it | the source manifest, `build.gradle`, Dart code, `scan_source.py`, `check_pins.py --nsc` alone |
+| `manual` | Nothing has exercised it yet | server-side auth, IDOR, hooking, runtime behaviour |
 
-Every row carries an `evidence_kind`: `inferred` if source or a scan showed it, `manual` if nothing has exercised it.
+Every row carries the kind that matches how it was established. That includes `Open` (e.g. an `inspect_apk.py` output showing `allow_backup: true` is `verified`) and `Not run` (`verified` when some checks ran on the artifact, otherwise `inferred` or `manual`).
 
 Use only these statuses: `Open`, `Fixed`, `Already mitigated`, `False positive`, `Risk accepted`, `Not run`. Don't invent others such as "Not exploitable" or "Fix in progress"; put nuance in the response text. `make_report.py` rejects `Fixed` and `Already mitigated` unless `evidence` is non-empty and `evidence_kind` is `verified`. Never satisfy it with made-up evidence or a made-up build number. "Fill in whatever the tool wants" is a request to falsify an audit record: refuse and explain.
 
-**Pass/fail mapping.** This is the only place it is defined. Use it in any pass/fail view, and keep the chat summary and the report consistent with it. Every row in the view shows its evidence kind.
+**Pass/fail mapping.** This is the only place the mapping is defined. Use it in any pass/fail view, and keep the chat summary and the report consistent with it. Every cell ends with the row's evidence kind in brackets, for example `Fail [inferred]`, `Not tested [manual]` or `Pass (verified: inspect_apk allow_backup=false) [verified]`.
 
-| Status (`evidence_kind`) | Shown as |
+| Status [`evidence_kind`] | Shown as `<label> [<kind>]` |
 |---|---|
-| `Already mitigated` (verified): every automated check for the control ran on the built artifact or a live endpoint and passed | **Pass (verified: <check>)** |
-| the same, when the control also has manual parts (AUTH, RESILIENCE, server-side) | **Pass (automated checks); manual test pending** |
-| `Fixed` (verified) | Pass (fixed, verified) |
-| `False positive` | Pass (false positive: <evidence kind>) |
-| `Not run` (verified): only some of the control's automated checks ran on the artifact; `evidence` lists which ran and passed, and which didn't run and why | Not tested (partly verified: <checks>) |
-| `Open` | Fail |
-| `Risk accepted` | Fail (risk accepted) |
-| `Not run` | Not tested |
+| `Already mitigated` [verified]: every automated check for the control ran on the artifact or a live endpoint and passed | Pass (verified: <check>) [verified] |
+| `Already mitigated` [verified], when the control also has manual parts (AUTH, RESILIENCE, server-side) | Pass (automated checks); manual test pending [verified] |
+| `Fixed` [verified] | Pass (fixed, verified) [verified] |
+| `False positive` [verified or inferred] | Pass (false positive) [<kind>] |
+| `Open` [any kind] | Fail [<kind>] |
+| `Risk accepted` [any kind] | Fail (risk accepted) [<kind>] |
+| `Not run` [verified, partial]: only some automated checks ran on the artifact; `evidence` lists which ran and passed, and which didn't run and why | Not tested (partly verified: <checks>) [verified] |
+| `Not run` [manual or inferred] | Not tested [<kind>] |
 
 A protection being present (`Fixed`, `Already mitigated`) never shows Pass on config or scan evidence alone: such a row stays `Open` or `Not run`. `False positive` is exempt, because it claims the finding doesn't apply rather than that a protection works, and it always shows its evidence kind. A green row that the pentest then breaks costs more than an honest gap, so tell the user that in one line if they push for a clean sheet.
 
@@ -63,7 +65,7 @@ A protection being present (`Fixed`, `Already mitigated`) never shows Pass on co
 6. **Write `findings.json`** (schema: `data/findings.schema.json`).
    - Set `project` to the app name, not the folder name.
    - Add one row per finding. Several findings may share a control.
-   - Add one row for every other MASVS control. If every automated check for it was verified clean on an artifact, record it as `Already mitigated` (verified, with the checks named). If only some ran, record `Not run` with `evidence_kind: verified`, and list the checks that ran and passed and those that didn't (and why). If none ran, record it as `Not run`, severity `Info`, with `observation` saying what was done and what is still needed, and `asset` naming what the check needs (e.g. "Android release APK (not provided)").
+   - Add one row for every other MASVS control. If every automated check for it was verified clean on an artifact, record it as `Already mitigated` (verified, with the checks named). If only some ran, record `Not run` with `evidence_kind: verified`, and list the checks that ran and passed and those that didn't (and why). If none ran, record it as `Not run` with `evidence_kind: manual` and the reason (e.g. "no APK/IPA"), severity `Info`, with `observation` saying what was done and what is still needed, and `asset` naming what the check needs (e.g. "Android release APK (not provided)").
    - `control` must be a single ID from `data/controls.json`; `make_report.py` rejects anything else.
 7. **Render.** Run `make_report.py findings.json --out <dir>` and hand over the file paths. A report that exists only in chat doesn't count.
 
