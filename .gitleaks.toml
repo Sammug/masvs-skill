@@ -1,0 +1,11 @@
+title = "masvs-skill"
+
+[extend]
+useDefault = true
+
+[allowlist]
+description = "Deliberately fake credentials used by skill eval fixtures"
+paths = [
+  '''^evals/fixtures/3-secret-in-repo/''',
+  '''^evals/scenarios\.md$''',
+]
