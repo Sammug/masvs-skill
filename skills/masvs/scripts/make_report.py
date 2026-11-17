@@ -6,6 +6,7 @@ import json
 import re
 import sys
 from datetime import date
+from functools import lru_cache
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
@@ -22,7 +23,7 @@ COLUMNS = [
     ("Re-test Build", "retest_build"), ("Ticket", "ticket"), ("MASVS Control", "control"),
     ("MASWE", "maswe"),
 ]
-WIDTHS = [28, 18, 45, 35, 11, 45, 18, 40, 45, 14, 12, 18, 18]
+WIDTHS = [28, 18, 45, 35, 11, 45, 18, 40, 45, 14, 12, 18, 40]
 FOOTNOTE = (
     "Evidence tags: [verified] a script or command showed it; "
     "[inferred] reasoned from code or config; [manual] needs manual test"
@@ -67,6 +68,17 @@ def _check(value, schema: dict, path: str, errors: list[str]) -> None:
             _check(item, schema["items"], f"{path}[{i}]", errors)
 
 
+@lru_cache(maxsize=None)
+def load_maswe() -> dict:
+    doc = json.loads((DATA / "maswe.json").read_text(encoding="utf-8"))
+    return {w["id"]: w for w in doc["weaknesses"]}
+
+
+def maswe_ids(f: dict) -> list[str]:
+    v = f.get("maswe") or []
+    return [v] if isinstance(v, str) else [str(x) for x in v]
+
+
 def validate(data) -> list[str]:
     schema = json.loads((DATA / "findings.schema.json").read_text(encoding="utf-8"))
     errors: list[str] = []
@@ -77,6 +89,11 @@ def validate(data) -> list[str]:
     for i, f in enumerate(data["findings"]):
         if f["control"] not in controls:
             errors.append(f"$.findings[{i}].control: unknown control {f['control']!r}")
+    catalog = load_maswe()
+    for i, f in enumerate(data["findings"]):
+        for m in maswe_ids(f):
+            if m not in catalog:
+                errors.append(f"$.findings[{i}].maswe: unknown weakness {m!r} (not in data/maswe.json)")
     for i, f in enumerate(data["findings"]):
         label = f"$.findings[{i}] ({f['title']})"
         evidence = str(f.get("evidence") or "").strip()
@@ -91,6 +108,17 @@ def validate(data) -> list[str]:
     return errors
 
 
+def warnings(data) -> list[str]:
+    catalog = load_maswe()
+    out = []
+    for i, f in enumerate(data["findings"]):
+        for m in maswe_ids(f):
+            if f["control"] not in catalog[m]["controls"]:
+                out.append(f"$.findings[{i}] ({f['title']}): {m} maps to "
+                           f"{', '.join(catalog[m]['controls'])}, not {f['control']}")
+    return out
+
+
 def clean(value) -> str:
     return redact_literals(redact(str(value)))
 
@@ -99,8 +127,9 @@ def cell(f: dict, key: str) -> str:
     v = f.get(key, "")
     if v is None:
         v = ""
-    if key == "maswe" and isinstance(v, list):
-        v = ", ".join(str(x) for x in v)
+    if key == "maswe":
+        catalog = load_maswe()
+        v = "; ".join(f"{m} ({catalog[m]['title']})" if m in catalog else m for m in maswe_ids(f))
     text = clean(v)
     if key == "evidence" and text and f.get("evidence_kind"):
         text = f"[{f['evidence_kind']}] {text}"
@@ -235,7 +264,11 @@ def main(argv=None) -> int:
     else:
         second = out / "report.csv"
         write_csv(second, table)
-    return emit({"written": [str(md), str(second)]})
+    result = {"written": [str(md), str(second)]}
+    notes = warnings(data)
+    if notes:
+        result["warnings"] = [clean(n) for n in notes]
+    return emit(result)
 
 
 if __name__ == "__main__":

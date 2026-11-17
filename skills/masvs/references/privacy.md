@@ -9,6 +9,8 @@
 
 MASTG candidates: `mastg_tests` in `data/controls.json` (PRIVACY-2 and -4 have none mapped). Test index: https://mas.owasp.org/MASTG/tests/
 
+MASWE weaknesses for this group (requirement, modes, mitigations): `references/maswe.md`, section PRIVACY; full entries in `data/maswe.json`. Scan matches carry their rule's MASWE ID.
+
 Legal questions (lawful basis, retention periods, regulator-specific duties) go to Legal/Compliance. This playbook covers what the app sends and asks for.
 
 ## What to check

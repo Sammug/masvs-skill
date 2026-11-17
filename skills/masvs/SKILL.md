@@ -2,7 +2,7 @@
 name: masvs
 description: Use for mobile app security work on Flutter, native Android (Kotlin/Java), native iOS (Swift/ObjC) or React Native apps measured against OWASP MASVS. Triggers include pentest or VAPT prep, a mobile security review or audit, questions about MASVS, MASTG or MASWE, an auditor's findings sheet or security tickets to respond to, a request to mark a finding fixed or false positive, a pre-release security checklist for a feature (storage, crypto, auth, network, WebView, IPC, logging, root/jailbreak detection), APK/IPA inspection, certificate pinning, and secrets found in a mobile repo.
 metadata:
-  version: 0.2.0
+  version: 0.3.0
 ---
 
 # MASVS audit and remediation
@@ -48,7 +48,11 @@ A protection being present (`Fixed`, `Already mitigated`) never shows Pass on co
 - Info: Not run rows and notes.
 - Leaked credentials and keystores (committed signing keys, service-account keys, API secrets): High by default; Critical once a release signing key or a production cloud credential is confirmed. Rate by exposure, not by whether the file ships in the build. Recommend revoking or rotating, because deleting the file doesn't un-leak it.
 
-**MASWE IDs:** an ID in the control's `maswe` list in `data/controls.json` can be used as is, without a web check. Pick the one whose weakness matches, and leave the field empty if none does. An ID outside that list needs its title confirmed on mas.owasp.org first; otherwise leave the field empty.
+**MASWE (weaknesses).** MASVS says what to achieve; MASWE names the specific weakness that breaks it. `data/maswe.json` is the full OWASP MASWE catalog (version in its `version` field): for each ID, its `title`, `requirement`, `controls`, `platforms`, `cwe`, `modes` (how the weakness gets introduced) and `mitigations`. `references/maswe.md` is the same catalog as tables grouped by MASVS group. Fill `maswe` on every finding:
+- A scan match carries its rule's `maswe`. Keep it if it describes what you confirmed, otherwise replace it.
+- Otherwise pick from the control's `maswe` list in `data/controls.json`, matching what you found against each candidate's `modes`. Use the weakness, not the nearest title: a token logged by a plugin is MASWE-0005 whether or not the auditor wrote "logging".
+- Leave it empty when no weakness fits. Never invent an ID: `make_report.py` rejects any ID not in the catalog, and warns (`warnings`) when an ID isn't mapped to the finding's `control`. Resolve the warning by fixing the control or the ID, not by ignoring it.
+- In a response or checklist, quote the weakness's `requirement` as the acceptance criterion and name its mitigation, then link its `url`.
 
 ## Pick a mode
 
@@ -59,7 +63,7 @@ A protection being present (`Fixed`, `Already mitigated`) never shows Pass on co
 ## Audit flow
 
 1. **Detect.** Run `detect_stack.py <root>`. Check every stack it finds, including native extensions, widgets and modules inside a Flutter or React Native repo, even if the user says "just the Dart code". Pentesters test the whole bundle; say so in one line. Name the target in `asset` (e.g. "iOS Share Extension (ios/ShareExtension)") and rate it like the main app. Platforms in the repo that are out of scope (macOS, web) get one `Not run` row listed as "not assessed", not a finding per scan match; drop their scan matches (e.g. a macOS Podfile) from the findings.
-2. **Scan.** Run `scan_source.py <root>`. Its output is **matches, not findings**: you assign severity and status after reading the playbook. Rules with a filename trigger (SECRET-KEYSTORE-*, SECRET-KEYPROPS-1) match on the path alone, never read the file and skip git-ignored paths; SECRET-SA-1 matches a service-account key file by its `"type"` field. Controls for committed secrets: CRYPTO-2 for signing keys, keystores and service-account private keys (as SECRET-PEM-1), STORAGE-2 for tokens and API keys (SECRET-GOOGLE-1 and similar). Confirm with `git ls-files` and `git log --stat -- <path>` whether the file is tracked or only in history, and whether it is a debug or release key. `status: unresolved` means a placeholder such as `${allowBackup}`. Resolve it from `manifestPlaceholders` (`defaultConfig` plus the release flavor; a flavor without an override inherits the default) and report the value as `inferred`. If it can't be resolved, record it as `Not run` with `evidence_kind: inferred`: "unresolved placeholder: check merged manifest/APK".
+2. **Scan.** Run `scan_source.py <root>`. Its output is **matches, not findings**: you assign severity and status after reading the playbook. Rules with a filename trigger (SECRET-KEYSTORE-*, SECRET-KEYPROPS-1) match on the path alone, never read the file and skip git-ignored paths; SECRET-SA-1 matches a service-account key file by its `"type"` field. Controls for committed secrets: CRYPTO-2 for signing keys, keystores and service-account private keys (as SECRET-PEM-1), STORAGE-2 for tokens and API keys found in the repo (SECRET-GOOGLE-1 and similar). When the value also ships inside the app package (in `lib/`, assets or the built APK/IPA), it is MASWE-0004: record it under STORAGE-1. Confirm with `git ls-files` and `git log --stat -- <path>` whether the file is tracked or only in history, and whether it is a debug or release key. `status: unresolved` means a placeholder such as `${allowBackup}`. Resolve it from `manifestPlaceholders` (`defaultConfig` plus the release flavor; a flavor without an override inherits the default) and report the value as `inferred`. If it can't be resolved, record it as `Not run` with `evidence_kind: inferred`: "unresolved placeholder: check merged manifest/APK".
 3. **Artifacts.** If an APK or IPA is given, run `inspect_apk.py` / `inspect_ipa.py`. Otherwise every check that needs a build is `Not run` ("no APK/IPA"): merged-manifest values, `debuggable`, exported components, permissions, binary protections and release flags. If CI is down, suggest a local `flutter build apk --release` or an archive.
 4. **Pins.** Run `check_pins.py --nsc <file>` for each network security config, adding `--host <host>` for a live match. A past `expiration` means Android stops enforcing the pins, so report it as a finding. A pin-set being present doesn't prove pinning works.
 5. **Read only the playbooks for the groups you hit** (see Routing), then decide each match.
@@ -74,7 +78,7 @@ A protection being present (`Fixed`, `Already mitigated`) never shows Pass on co
 
 For each auditor finding:
 
-1. **Map** it to a MASVS control (`references/controls.md`) and its MASWE IDs.
+1. **Map** it to a MASVS control (`references/controls.md`) and the MASWE weakness it describes (`references/maswe.md`; match the auditor's observation against `modes` in `data/maswe.json`). An auditor's finding often names a symptom or a tool's check rather than the weakness; map the weakness, and say in the response which one it is.
 2. **Reproduce** it before deciding: find the exact file, line or binary entry with a script or command, and resolve placeholders and flavors as in audit step 2. A changelog entry, commit message or teammate's word is intent, not evidence. If no script fits (server-side or auth findings), read the code path (`inferred`) and list the playbook's manual test (`manual`).
 3. **Classify each row on its own evidence**, never all rows the same way because the user asked.
    - **Fix**: the issue is real in the shipped build.
@@ -86,7 +90,7 @@ For each auditor finding:
 
 ## Checklist mode
 
-Identify the stack (`detect_stack.py`) and the feature's MASVS groups. Read only the "What to check" and "Fix patterns" sections of those playbooks. For that stack, give a short checklist, the fix pattern for each item, and the test to show an auditor.
+Identify the stack (`detect_stack.py`) and the feature's MASVS groups. Read only the "What to check" and "Fix patterns" sections of those playbooks, and the MASWE entries for those groups in `data/maswe.json`, filtered by `platforms`. For that stack, give a short checklist with one item per relevant weakness (its ID and `requirement`), the fix pattern for each item, and the test to show an auditor. Skip weaknesses the feature can't introduce, and say which you skipped in one line.
 
 ## Routing
 
@@ -102,6 +106,7 @@ Identify the stack (`detect_stack.py`) and the feature's MASVS groups. Read only
 | Data minimisation, consent, telemetry, tracking | `references/privacy.md` | PRIVACY-1..4 |
 | Known false positives with an evidence recipe | `references/false-positives.md` | — |
 | Control list, MASWE and MASTG IDs, links | `references/controls.md`, `data/controls.json` | — |
+| Weakness catalog: titles, requirements, modes, mitigations | `references/maswe.md`, `data/maswe.json` | — |
 
 `mastg_tests` in `data/controls.json` is a **candidate** list mapped through shared MASWE IDs. Cite a MASTG test only after reading it and confirming that it applies.
 
@@ -110,11 +115,11 @@ Identify the stack (`detect_stack.py`) and the feature's MASVS groups. Read only
 | Script | CLI | Key output |
 |---|---|---|
 | `detect_stack.py` | `<root>` | `stacks`, `android_manifests`, `ios_plists`, `dependency_files` |
-| `scan_source.py` | `<root> [--stacks flutter,android,ios,react-native] [--include-deps]` | `stacks`; `matches[]`: `rule`, `control`, `file`, `line`, `snippet` (secrets redacted), `owner`, `status` (`match`/`unresolved`); `skipped_rules` |
+| `scan_source.py` | `<root> [--stacks flutter,android,ios,react-native] [--include-deps]` | `stacks`; `matches[]`: `rule`, `control`, `maswe`, `file`, `line`, `snippet` (secrets redacted), `owner`, `status` (`match`/`unresolved`); `skipped_rules` |
 | `inspect_apk.py` | `<apk>` (aapt2 or apkanalyzer; found in the Android SDK build-tools if not on PATH) | `min_sdk`, `target_sdk`, `allow_backup`, `uses_cleartext`, `network_security_config`, `exported`, `permissions`, `debuggable` (`null` + `notes` when unresolved) |
 | `inspect_ipa.py` | `<ipa>` (macOS: otool, plutil, unzip) | `bundle_id`, `ats` (main app; `null` + `notes` if its Info.plist is unreadable); `bundles[]`: `path`, `bundle_id`, `ats` (main app and each `PlugIns/*.appex`); `binaries[]` (app, frameworks, extensions): `path`, `kind` (`dart-aot`/`objc-swift`/`c`), `pie`, `arc`, `stack_canary`, `note` |
 | `check_pins.py` | `--nsc <xml> [--host H --port 443 \| --chain PEM] [--today YYYY-MM-DD]` | `domains[]`: `pins`, `expiration`, `days_left`, `backup_pin`, `live_match`, `pinned_level` |
-| `make_report.py` | `<findings.json> --out <dir>` | `written` (report.md + .xlsx/.csv), or `error` + `details` |
+| `make_report.py` | `<findings.json> --out <dir>` | `written` (report.md + .xlsx/.csv) and `warnings` (MASWE/control mismatches), or `error` + `details` |
 
 ## Rules
 
@@ -143,4 +148,4 @@ Identify the stack (`detect_stack.py`) and the feature's MASVS groups. Read only
 
 ## Attribution
 
-Control IDs, summaries and links come from OWASP MASVS v2.1.0, MASTG and MASWE (https://mas.owasp.org/), CC BY-SA 4.0, paraphrased. Cite control IDs and link to them rather than quoting.
+Control IDs, summaries and links come from OWASP MASVS v2.1.0, MASTG and MASWE (https://mas.owasp.org/), CC BY-SA 4.0. Control summaries are paraphrased; MASWE titles and requirements are quoted. Cite IDs and link to them.

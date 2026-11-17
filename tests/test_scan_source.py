@@ -347,7 +347,7 @@ def test_matches_sorted_and_deduped():
 def test_match_shape():
     res = run(FIX / "flutter_bad", "--stacks", "flutter")
     for m in res["matches"]:
-        assert set(m) == {"rule", "control", "file", "line", "snippet", "owner", "status"}
+        assert set(m) == {"rule", "control", "maswe", "file", "line", "snippet", "owner", "status"}
         assert m["status"] in {"match", "unresolved"}
         assert len(m["snippet"]) <= 200
 

@@ -30,7 +30,7 @@ def finding(**kw):
     base = {
         "title": "Cleartext traffic allowed",
         "control": "MASVS-NETWORK-1",
-        "maswe": "MASWE-0050",
+        "maswe": "MASWE-0026",
         "asset": "Android app",
         "observation": "obs",
         "impact": "imp",
@@ -69,7 +69,45 @@ def test_unknown_control_rejected():
 
 
 def test_valid_document_passes():
-    assert make_report.validate(doc(finding(maswe=["MASWE-1", "MASWE-2"]))) == []
+    assert make_report.validate(doc(finding(maswe=["MASWE-0026", "MASWE-0027"]))) == []
+
+
+@pytest.mark.parametrize("bad", ["MASWE-9999", "MASWE-1", "maswe-0026"])
+def test_unknown_maswe_rejected(bad):
+    errs = make_report.validate(doc(finding(maswe=[bad])))
+    assert any("unknown weakness" in e and bad in e for e in errs)
+
+
+def test_maswe_string_or_empty_accepted():
+    assert make_report.validate(doc(finding(maswe="MASWE-0026"), finding(maswe=[]), finding(maswe=""))) == []
+    del_maswe = finding()
+    del del_maswe["maswe"]
+    assert make_report.validate(doc(del_maswe)) == []
+
+
+def test_maswe_control_mismatch_warns_not_fails(tmp_path):
+    data = doc(finding(maswe=["MASWE-0006"]))
+    assert make_report.validate(data) == []
+    p = write(tmp_path, data)
+    r = subprocess.run([sys.executable, str(SCRIPTS / "make_report.py"), str(p), "--out", str(tmp_path / "o")],
+                       capture_output=True, text=True)
+    out = json.loads(r.stdout)
+    assert r.returncode == 0 and out["written"]
+    assert len(out["warnings"]) == 1
+    assert "MASWE-0006 maps to MASVS-STORAGE-2, not MASVS-NETWORK-1" in out["warnings"][0]
+
+
+def test_no_warnings_key_when_mapping_matches(tmp_path):
+    p = write(tmp_path, doc(finding()))
+    r = subprocess.run([sys.executable, str(SCRIPTS / "make_report.py"), str(p), "--out", str(tmp_path / "o")],
+                       capture_output=True, text=True)
+    assert "warnings" not in json.loads(r.stdout)
+
+
+def test_markdown_shows_maswe_title(tmp_path):
+    p = write(tmp_path, doc(finding()))
+    make_report.main([str(p), "--out", str(tmp_path)])
+    assert "MASWE-0026 (Network Traffic Not Encrypted)" in (tmp_path / "report.md").read_text()
 
 
 def test_cli_validation_error_exits_2(tmp_path):
@@ -98,11 +136,11 @@ def test_markdown_escapes_pipes(tmp_path):
 
 @pytest.mark.skipif(openpyxl is None, reason="openpyxl missing")
 def test_xlsx_columns(tmp_path):
-    p = write(tmp_path, doc(finding(maswe=["A", "B"])))
+    p = write(tmp_path, doc(finding(maswe=["MASWE-0026", "MASWE-0027"])))
     make_report.main([str(p), "--out", str(tmp_path)])
     ws = openpyxl.load_workbook(tmp_path / "report.xlsx").active
     assert [c.value for c in ws[1]] == COLUMNS
-    assert ws["M2"].value == "A, B"
+    assert ws["M2"].value == "MASWE-0026 (Network Traffic Not Encrypted); MASWE-0027 (Insecure Certificate Validation)"
     assert ws["I2"].value.startswith("[verified] ")
     assert ws.freeze_panes == "B2"
 

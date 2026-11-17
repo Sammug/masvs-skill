@@ -1,0 +1,2374 @@
+{
+  "version": "v1.0.0",
+  "source": "https://github.com/OWASP/maswe",
+  "weaknesses": [
+    {
+      "id": "MASWE-0001",
+      "title": "Sensitive Data Stored Unencrypted in Private Storage",
+      "requirement": "The app encrypts sensitive data stored in private storage.",
+      "group": "STORAGE",
+      "controls": [
+        "MASVS-CRYPTO-2",
+        "MASVS-STORAGE-1",
+        "MASVS-STORAGE-2"
+      ],
+      "platforms": [
+        "android",
+        "ios"
+      ],
+      "cwe": [
+        200,
+        284,
+        312,
+        313,
+        732,
+        922
+      ],
+      "modes": [
+        "Data Stored Unencrypted",
+        "Hardcoded Encryption Key",
+        "Encryption Key Stored on Filesystem",
+        "Insufficient Encryption",
+        "Insufficient Access Restrictions",
+        "Data Not Removed After Use"
+      ],
+      "mitigations": [
+        "Minimize Local Storage of Sensitive Data",
+        "Restrict File Access",
+        "Remove Data When No Longer Needed",
+        "Use Platform Keystores",
+        "Encrypt Data at Rest"
+      ],
+      "url": "https://mas.owasp.org/MASWE/MASVS-STORAGE/MASWE-0001/"
+    },
+    {
+      "id": "MASWE-0002",
+      "title": "Sensitive Data Stored Unencrypted Outside of Private Storage",
+      "requirement": "The app encrypts sensitive data stored outside of private storage.",
+      "group": "STORAGE",
+      "controls": [
+        "MASVS-STORAGE-1",
+        "MASVS-STORAGE-2"
+      ],
+      "platforms": [
+        "android",
+        "ios"
+      ],
+      "cwe": [
+        200,
+        284,
+        312,
+        313,
+        732,
+        921,
+        922
+      ],
+      "modes": [
+        "Data Stored Unencrypted",
+        "Hardcoded Encryption Key",
+        "Encryption Key Stored on Filesystem",
+        "Insufficient Encryption",
+        "Reuse of Encryption Key"
+      ],
+      "mitigations": [
+        "Prefer Private Storage",
+        "Limit Platform File Sharing",
+        "Encrypt Data Before Writing",
+        "Protect Encryption Keys"
+      ],
+      "url": "https://mas.owasp.org/MASWE/MASVS-STORAGE/MASWE-0002/"
+    },
+    {
+      "id": "MASWE-0003",
+      "title": "Cryptographic Keys Stored Outside of Platform Keystore",
+      "requirement": "The app stores cryptographic keys inside the platform-provided secure keystore.",
+      "group": "STORAGE",
+      "controls": [
+        "MASVS-CRYPTO-2",
+        "MASVS-STORAGE-1"
+      ],
+      "platforms": [
+        "android",
+        "ios"
+      ],
+      "cwe": [
+        312,
+        318,
+        321
+      ],
+      "modes": [
+        "Insecure Storage Locations",
+        "Hardcoded Cryptographic Keys",
+        "Insecure Key Import"
+      ],
+      "mitigations": [
+        "Use Platform Keystores",
+        "Implement Strongest Hardware Security Solutions",
+        "Use Cryptographic Key Management Systems",
+        "Encrypt and Wrap Keys",
+        "Follow Standard Key Management Best Practices"
+      ],
+      "url": "https://mas.owasp.org/MASWE/MASVS-STORAGE/MASWE-0003/"
+    },
+    {
+      "id": "MASWE-0004",
+      "title": "Sensitive Data Hardcoded in the App Package",
+      "requirement": "The app does not hardcode sensitive data in the application package.",
+      "group": "STORAGE",
+      "controls": [
+        "MASVS-STORAGE-1"
+      ],
+      "platforms": [
+        "android",
+        "ios"
+      ],
+      "cwe": [
+        312,
+        321,
+        540,
+        798
+      ],
+      "modes": [
+        "App Source Code",
+        "App Assets and Resources",
+        "Libraries",
+        "Build and Developer Leftovers"
+      ],
+      "mitigations": [
+        "Proxy Static Secrets Through a Middleware",
+        "Use Stateful API Services",
+        "Retrieve Secrets at Runtime",
+        "Restrict Unavoidable Hardcoded Secrets",
+        "Use Platform Keystores",
+        "Audit for Leftover Secrets",
+        "Harden Only as a Last Resort"
+      ],
+      "url": "https://mas.owasp.org/MASWE/MASVS-STORAGE/MASWE-0004/"
+    },
+    {
+      "id": "MASWE-0005",
+      "title": "Insertion of Sensitive Data into Logs",
+      "requirement": "The app excludes sensitive data from application logs.",
+      "group": "STORAGE",
+      "controls": [
+        "MASVS-STORAGE-2"
+      ],
+      "platforms": [
+        "android",
+        "ios"
+      ],
+      "cwe": [
+        209,
+        359,
+        497,
+        532
+      ],
+      "modes": [
+        "Sensitive Data in System Logs",
+        "Sensitive Data in App Log Files",
+        "Verbose Logging in Production"
+      ],
+      "mitigations": [
+        "Avoid Logging Sensitive Data",
+        "Redact Sensitive Data",
+        "Use Log Levels Properly",
+        "Disable Logging in Production"
+      ],
+      "url": "https://mas.owasp.org/MASWE/MASVS-STORAGE/MASWE-0005/"
+    },
+    {
+      "id": "MASWE-0006",
+      "title": "Sensitive Data Not Excluded From Backup",
+      "requirement": "The app excludes sensitive data from backups.",
+      "group": "STORAGE",
+      "controls": [
+        "MASVS-STORAGE-2"
+      ],
+      "platforms": [
+        "android",
+        "ios"
+      ],
+      "cwe": [
+        212,
+        313
+      ],
+      "modes": [
+        "Automatic System Backups",
+        "Local Backups",
+        "Device-To-Device Transfer",
+        "Sensitive Data Unencrypted in Backups"
+      ],
+      "mitigations": [
+        "Exclude Sensitive Data from Backups",
+        "Encrypt Data That Must Be Backed Up",
+        "Constrain Backup Conditions"
+      ],
+      "url": "https://mas.owasp.org/MASWE/MASVS-STORAGE/MASWE-0006/"
+    },
+    {
+      "id": "MASWE-0007",
+      "title": "Improper Encryption",
+      "requirement": "The app properly encrypts sensitive data.",
+      "group": "CRYPTO",
+      "controls": [
+        "MASVS-CRYPTO-1",
+        "MASVS-CRYPTO-2"
+      ],
+      "platforms": [
+        "android",
+        "ios"
+      ],
+      "cwe": [
+        208,
+        323,
+        325,
+        326,
+        327,
+        329,
+        780
+      ],
+      "modes": [
+        "Broken Algorithms",
+        "Predictable or Reused Initialization Vectors (IVs)",
+        "Risky Padding",
+        "Broken Modes of Operation",
+        "Insufficient Key Length",
+        "Insecure or Wrong Key Usage",
+        "Non-Cryptographic Operations"
+      ],
+      "mitigations": [
+        "Use Secure Encryption Modes",
+        "Ensure Proper Initialization Vector Management",
+        "Use Sufficiently Long Keys",
+        "Use Each Key for a Single Purpose",
+        "Do Not Expose Cryptographic Errors",
+        "Rely on Proper Cryptographic Primitives"
+      ],
+      "url": "https://mas.owasp.org/MASWE/MASVS-CRYPTO/MASWE-0007/"
+    },
+    {
+      "id": "MASWE-0008",
+      "title": "Improper Hashing",
+      "requirement": "The app properly hashes sensitive data.",
+      "group": "CRYPTO",
+      "controls": [
+        "MASVS-CRYPTO-1"
+      ],
+      "platforms": [
+        "android",
+        "ios"
+      ],
+      "cwe": [
+        328
+      ],
+      "modes": [
+        "Broken Hash Algorithms",
+        "Wrong Hash for the Job",
+        "Truncated Digests"
+      ],
+      "mitigations": [
+        "Use Approved Hash Functions",
+        "Use Password-Based KDFs for Passwords",
+        "Preserve Digest Length"
+      ],
+      "url": "https://mas.owasp.org/MASWE/MASVS-CRYPTO/MASWE-0008/"
+    },
+    {
+      "id": "MASWE-0009",
+      "title": "Improper Use of Message Authentication Code (MAC)",
+      "requirement": "The app properly uses Message Authentication Codes (MACs).",
+      "group": "CRYPTO",
+      "controls": [
+        "MASVS-CRYPTO-1",
+        "MASVS-CRYPTO-2"
+      ],
+      "platforms": [
+        "android",
+        "ios"
+      ],
+      "cwe": [
+        208,
+        323,
+        327,
+        354,
+        807
+      ],
+      "modes": [
+        "Non-Cryptographic Checksums",
+        "MACs Built on Weak Hashes",
+        "Weak or Reused MAC Keys",
+        "Fragile Constructions",
+        "Truncated Tags",
+        "Missing Replay Protection",
+        "Observable Verification Failures"
+      ],
+      "mitigations": [
+        "Use Standard MAC Algorithms",
+        "Use Strong, Single-Purpose Keys",
+        "Prefer AEAD or Encrypt-then-MAC",
+        "Use Full-Length Tags",
+        "Add Replay Protection",
+        "Verify in Constant Time"
+      ],
+      "url": "https://mas.owasp.org/MASWE/MASVS-CRYPTO/MASWE-0009/"
+    },
+    {
+      "id": "MASWE-0010",
+      "title": "Improper Generation of Cryptographic Signatures",
+      "requirement": "The app properly generates cryptographic signatures.",
+      "group": "CRYPTO",
+      "controls": [
+        "MASVS-CRYPTO-1",
+        "MASVS-CRYPTO-2"
+      ],
+      "platforms": [
+        "android",
+        "ios"
+      ],
+      "cwe": [
+        323,
+        326,
+        327,
+        330
+      ],
+      "modes": [
+        "Weak or Deprecated Signature Algorithms",
+        "Insufficient Key Length",
+        "Predictable Signature Nonces",
+        "Key Reuse Across Purposes"
+      ],
+      "mitigations": [
+        "Use Approved Signature Schemes",
+        "Use Sufficient Key Lengths",
+        "Ensure Nonce Uniqueness",
+        "Use Signing Keys for a Single Purpose"
+      ],
+      "url": "https://mas.owasp.org/MASWE/MASVS-CRYPTO/MASWE-0010/"
+    },
+    {
+      "id": "MASWE-0011",
+      "title": "Improper Verification of Cryptographic Signature",
+      "requirement": "The app properly verifies cryptographic signatures.",
+      "group": "CRYPTO",
+      "controls": [
+        "MASVS-CRYPTO-1"
+      ],
+      "platforms": [
+        "android",
+        "ios"
+      ],
+      "cwe": [
+        295,
+        347
+      ],
+      "modes": [
+        "Verification Skipped or Result Ignored",
+        "Untrusted or Unpinned Signer Keys",
+        "Algorithm Confusion"
+      ],
+      "mitigations": [
+        "Always Verify and Check the Result",
+        "Validate the Signer's Identity",
+        "Enforce the Expected Algorithm",
+        "Use Approved Schemes"
+      ],
+      "url": "https://mas.owasp.org/MASWE/MASVS-CRYPTO/MASWE-0011/"
+    },
+    {
+      "id": "MASWE-0012",
+      "title": "Improper Random Number Generation",
+      "requirement": "The app properly generates random numbers.",
+      "group": "CRYPTO",
+      "controls": [
+        "MASVS-CRYPTO-1"
+      ],
+      "platforms": [
+        "android",
+        "ios"
+      ],
+      "cwe": [
+        332,
+        337,
+        338
+      ],
+      "modes": [
+        "Risky Random APIs",
+        "Non-Random Sources",
+        "Hardcoded or Predictable Seeds"
+      ],
+      "mitigations": [
+        "Use Cryptographically Secure RNGs",
+        "Avoid Deterministic Seeding",
+        "Follow Established Guidance"
+      ],
+      "url": "https://mas.owasp.org/MASWE/MASVS-CRYPTO/MASWE-0012/"
+    },
+    {
+      "id": "MASWE-0013",
+      "title": "Improper Cryptographic Key Generation",
+      "requirement": "The app securely generates cryptographic keys.",
+      "group": "CRYPTO",
+      "controls": [
+        "MASVS-CRYPTO-2"
+      ],
+      "platforms": [
+        "android",
+        "ios"
+      ],
+      "cwe": [
+        331,
+        326,
+        337,
+        338,
+        522
+      ],
+      "modes": [
+        "Insufficient Entropy",
+        "Insufficient Key Length",
+        "Risky or Broken Algorithms",
+        "Insecure Key Export",
+        "Insecure Key Properties"
+      ],
+      "mitigations": [
+        "Use Established Cryptographic Libraries",
+        "Wrap Keys Before Export",
+        "Use Sufficient Key Lengths",
+        "Key Attestation"
+      ],
+      "url": "https://mas.owasp.org/MASWE/MASVS-CRYPTO/MASWE-0013/"
+    },
+    {
+      "id": "MASWE-0014",
+      "title": "Improper Cryptographic Key Derivation",
+      "requirement": "The app derives cryptographic keys using approved key derivation functions.",
+      "group": "CRYPTO",
+      "controls": [
+        "MASVS-CRYPTO-2"
+      ],
+      "platforms": [
+        "android",
+        "ios"
+      ],
+      "cwe": [
+        326,
+        327,
+        759,
+        760,
+        916
+      ],
+      "modes": [
+        "Plain Hash Instead of a KDF",
+        "Insufficient Work Factor",
+        "Missing or Predictable Salt",
+        "Low-Entropy Input"
+      ],
+      "mitigations": [
+        "Use a Password-Based KDF",
+        "Use an Adequate Work Factor",
+        "Use Unique Random Salts",
+        "Strengthen Low-Entropy Inputs"
+      ],
+      "url": "https://mas.owasp.org/MASWE/MASVS-CRYPTO/MASWE-0014/"
+    },
+    {
+      "id": "MASWE-0015",
+      "title": "Cryptographic Key Rotation Not Implemented",
+      "requirement": "The app rotates cryptographic keys regularly.",
+      "group": "CRYPTO",
+      "controls": [
+        "MASVS-CRYPTO-2"
+      ],
+      "platforms": [
+        "android",
+        "ios"
+      ],
+      "cwe": [
+        324
+      ],
+      "modes": [
+        "No Rotation Mechanism",
+        "Unbounded Cryptoperiods",
+        "Superseded Keys Not Retired"
+      ],
+      "mitigations": [
+        "Define Cryptoperiods",
+        "Use Versioned Keysets",
+        "Re-Encrypt and Retire Old Keys"
+      ],
+      "url": "https://mas.owasp.org/MASWE/MASVS-CRYPTO/MASWE-0015/"
+    },
+    {
+      "id": "MASWE-0016",
+      "title": "Cryptographic Key Access Not Restricted",
+      "requirement": "The app restricts access to cryptographic keys.",
+      "group": "CRYPTO",
+      "controls": [
+        "MASVS-AUTH-2",
+        "MASVS-AUTH-3",
+        "MASVS-CRYPTO-2"
+      ],
+      "platforms": [
+        "android",
+        "ios"
+      ],
+      "cwe": [
+        284,
+        306
+      ],
+      "modes": [
+        "No User Authentication Requirement",
+        "Usable While the Device Is Locked",
+        "Not Device-Bound",
+        "Unbounded Authorization Validity",
+        "Assuming Hardware Implies Restriction"
+      ],
+      "mitigations": [
+        "Require User Authentication for Key Use",
+        "Restrict Keys to Unlocked Devices",
+        "Bind Keys to the Device",
+        "Limit Authorization Validity",
+        "Configure Restrictions Even for Hardware-Backed Keys"
+      ],
+      "url": "https://mas.owasp.org/MASWE/MASVS-CRYPTO/MASWE-0016/"
+    },
+    {
+      "id": "MASWE-0017",
+      "title": "Device Secure Lock Not Enforced",
+      "requirement": "The app verifies that the device has a secure lock configured.",
+      "group": "CRYPTO",
+      "controls": [
+        "MASVS-CRYPTO-2"
+      ],
+      "platforms": [
+        "android",
+        "ios"
+      ],
+      "cwe": [],
+      "modes": [
+        "No Secure-Lock Check",
+        "Data Protection Not Tied to the Passcode",
+        "Stale Device-Lock Assumption"
+      ],
+      "mitigations": [
+        "Verify the Device Lock State",
+        "Re-check Before Enabling Protected Functionality",
+        "Bind Sensitive Key Use to Platform Authentication"
+      ],
+      "url": "https://mas.owasp.org/MASWE/MASVS-CRYPTO/MASWE-0017/"
+    },
+    {
+      "id": "MASWE-0018",
+      "title": "Lack of Authentication or Authorization on App Components",
+      "requirement": "The app enforces authentication and authorization on its components.",
+      "group": "AUTH",
+      "controls": [
+        "MASVS-AUTH-1",
+        "MASVS-PLATFORM-1",
+        "MASVS-STORAGE-2"
+      ],
+      "platforms": [
+        "android",
+        "ios"
+      ],
+      "cwe": [
+        306,
+        749,
+        862,
+        863,
+        923,
+        926,
+        939,
+        940
+      ],
+      "modes": [
+        "Unintentionally Exported Components",
+        "Missing or Weak Permissions on Exported Components",
+        "Caller Not Verified on IPC Interfaces",
+        "Over-Broad Data Grants",
+        "Unprotected Local Network Services",
+        "Authentication Material Not Validated",
+        "Missing Authentication or Authorization on Deep Links"
+      ],
+      "mitigations": [
+        "Do Not Export Components Unnecessarily",
+        "Protect Exported Components with Permissions",
+        "Verify Callers on IPC Interfaces",
+        "Grant Minimal, Short-Lived Data Access",
+        "Authenticate Local Services",
+        "Validate Authentication Material"
+      ],
+      "url": "https://mas.owasp.org/MASWE/MASVS-AUTH/MASWE-0018/"
+    },
+    {
+      "id": "MASWE-0019",
+      "title": "Lack of Auto-fill Support for Credential Providers",
+      "requirement": "The app enables auto-fill support for credential providers.",
+      "group": "AUTH",
+      "controls": [
+        "MASVS-AUTH-1",
+        "MASVS-AUTH-3"
+      ],
+      "platforms": [
+        "android",
+        "ios"
+      ],
+      "cwe": [
+        287,
+        522
+      ],
+      "modes": [
+        "No Auto-Fill Support in Credential Fields",
+        "No One-Time-Code Auto-Fill",
+        "Missing Website Association",
+        "Embedded Custom Login Instead of System Flows",
+        "No Support for Passwordless Authentication"
+      ],
+      "mitigations": [
+        "Support Platform Auto-Fill",
+        "Support One-Time-Code Auto-Fill",
+        "Associate the App with Its Domain",
+        "Use System Authentication Sessions for Third-Party Logins",
+        "Support Passkeys"
+      ],
+      "url": "https://mas.owasp.org/MASWE/MASVS-AUTH/MASWE-0019/"
+    },
+    {
+      "id": "MASWE-0020",
+      "title": "Local Authentication Can Be Bypassed",
+      "requirement": "The app implements local authentication securely.",
+      "group": "AUTH",
+      "controls": [
+        "MASVS-AUTH-2",
+        "MASVS-CRYPTO-2"
+      ],
+      "platforms": [
+        "android",
+        "ios"
+      ],
+      "cwe": [
+        285,
+        287,
+        312,
+        319,
+        326,
+        602,
+        603,
+        863,
+        922
+      ],
+      "modes": [
+        "Event-Bound Biometric Checks",
+        "Weak Keychain Access Control Flags",
+        "Insecure Device-Credential Fallback",
+        "Local-Only Enforcement",
+        "No Brute-Force Resistance",
+        "Custom Credentials Hardcoded"
+      ],
+      "mitigations": [
+        "Bind Authentication to Keystore Keys",
+        "Use Strict Access Control Flags",
+        "Enforce Authentication Server-Side",
+        "Bind Custom Credentials to the KeyChain",
+        "Require Explicit User Action",
+        "Resist Credential Guessing"
+      ],
+      "url": "https://mas.owasp.org/MASWE/MASVS-AUTH/MASWE-0020/"
+    },
+    {
+      "id": "MASWE-0021",
+      "title": "Fallback to Non-biometric Credentials Allowed for Sensitive Transactions",
+      "requirement": "The app does not allow fallback to non-biometric credentials for sensitive transactions.",
+      "group": "AUTH",
+      "controls": [
+        "MASVS-AUTH-2"
+      ],
+      "platforms": [
+        "android",
+        "ios"
+      ],
+      "cwe": [
+        288,
+        287
+      ],
+      "modes": [
+        "Device Credential Allowed for Sensitive Actions",
+        "Generic Authentication Policy on iOS",
+        "Operation Not Bound to a Biometric-Only Key"
+      ],
+      "mitigations": [
+        "Require Biometrics for Sensitive Transactions",
+        "Bind Operations to Biometric-Only Keys",
+        "Match Assurance to Sensitivity"
+      ],
+      "url": "https://mas.owasp.org/MASWE/MASVS-AUTH/MASWE-0021/"
+    },
+    {
+      "id": "MASWE-0022",
+      "title": "Crypto Keys Not Invalidated on New Biometric Enrollment",
+      "requirement": "The app invalidates keys after any enrollment of new biometric data.",
+      "group": "AUTH",
+      "controls": [
+        "MASVS-AUTH-2",
+        "MASVS-CRYPTO-2"
+      ],
+      "platforms": [
+        "android",
+        "ios"
+      ],
+      "cwe": [
+        287,
+        522
+      ],
+      "modes": [
+        "Invalidation Disabled on Android",
+        "Invalidation Not Enabled on iOS",
+        "Unsafe Invalidation Recovery"
+      ],
+      "mitigations": [
+        "Keep Enrollment Invalidation Enabled on Android",
+        "Enable Enrollment Invalidation on iOS",
+        "Handle Invalidation Safely"
+      ],
+      "url": "https://mas.owasp.org/MASWE/MASVS-AUTH/MASWE-0022/"
+    },
+    {
+      "id": "MASWE-0023",
+      "title": "Step-Up Authentication Not Implemented for Sensitive Actions",
+      "requirement": "The app enforces step-up authentication before granting access to sensitive functionality.",
+      "group": "AUTH",
+      "controls": [
+        "MASVS-AUTH-3",
+        "MASVS-PLATFORM-3"
+      ],
+      "platforms": [
+        "android",
+        "ios"
+      ],
+      "cwe": [
+        306
+      ],
+      "modes": [
+        "No Re-Authentication for Sensitive Actions",
+        "Step-Up Not Bound to the Action",
+        "Step-Up Not Enforced Server-Side",
+        "Uniform Assurance Level"
+      ],
+      "mitigations": [
+        "Classify Actions by Risk",
+        "Require Step-Up for Sensitive Actions",
+        "Bind the Challenge to the Action",
+        "Enforce Step-Up Server-Side"
+      ],
+      "url": "https://mas.owasp.org/MASWE/MASVS-AUTH/MASWE-0023/"
+    },
+    {
+      "id": "MASWE-0024",
+      "title": "Sensitive Data Accessible After Session Termination",
+      "requirement": "The app makes sensitive data inaccessible after session termination.",
+      "group": "AUTH",
+      "controls": [
+        "MASVS-AUTH-3"
+      ],
+      "platforms": [
+        "android",
+        "ios"
+      ],
+      "cwe": [
+        285,
+        287,
+        613
+      ],
+      "modes": [
+        "Sessions Not Invalidated Server-Side",
+        "Missing Client-Side Session Termination",
+        "No Re-Authentication on State Changes",
+        "Cached Data Not Cleared",
+        "Missing Inactivity Timeout"
+      ],
+      "mitigations": [
+        "Invalidate Sessions Fully",
+        "Re-Authenticate on Context Changes",
+        "Clear Sensitive Data on Termination",
+        "Enforce Timeouts"
+      ],
+      "url": "https://mas.owasp.org/MASWE/MASVS-AUTH/MASWE-0024/"
+    },
+    {
+      "id": "MASWE-0025",
+      "title": "Lack of Non-Repudiation for Critical Actions",
+      "requirement": "The app ensures non-repudiation for critical actions.",
+      "group": "AUTH",
+      "controls": [
+        "MASVS-AUTH-3"
+      ],
+      "platforms": [
+        "android",
+        "ios"
+      ],
+      "cwe": [
+        451,
+        778
+      ],
+      "modes": [
+        "No Trusted Confirmation Path",
+        "No Cryptographic Evidence of Approval"
+      ],
+      "mitigations": [
+        "Bind Cryptographic Evidence to the Action",
+        "Use the Strongest Available Alternative"
+      ],
+      "url": "https://mas.owasp.org/MASWE/MASVS-AUTH/MASWE-0025/"
+    },
+    {
+      "id": "MASWE-0026",
+      "title": "Network Traffic Not Encrypted",
+      "requirement": "The app encrypts all network traffic.",
+      "group": "NETWORK",
+      "controls": [
+        "MASVS-NETWORK-1"
+      ],
+      "platforms": [
+        "android",
+        "ios"
+      ],
+      "cwe": [
+        319
+      ],
+      "modes": [
+        "Cleartext Traffic Allowed in Platform-Provided Settings",
+        "Usage of HTTP",
+        "Usage of Non-HTTP Insecure Protocols",
+        "Unencrypted Machine-to-Machine Channels",
+        "Usage of Low-Level Network APIs",
+        "Cross-Platform Framework Misconfiguration",
+        "Third-Party Libraries"
+      ],
+      "mitigations": [
+        "Use Secure Protocols",
+        "Explicitly Disable Cleartext Traffic",
+        "Use Per-Domain Exceptions Sparingly",
+        "Prefer Server Fixes",
+        "Use High-Level Network APIs",
+        "Use Secure Cross-Platform Frameworks",
+        "Use Secure Third-Party Components"
+      ],
+      "url": "https://mas.owasp.org/MASWE/MASVS-NETWORK/MASWE-0026/"
+    },
+    {
+      "id": "MASWE-0027",
+      "title": "Insecure Certificate Validation",
+      "requirement": "The app validates certificates for all network traffic.",
+      "group": "NETWORK",
+      "controls": [
+        "MASVS-NETWORK-1"
+      ],
+      "platforms": [
+        "android",
+        "ios"
+      ],
+      "cwe": [
+        295,
+        297
+      ],
+      "modes": [
+        "Disabling Certificate Validation",
+        "Accepting Self-Signed Certificates",
+        "Ignoring Hostname Verification",
+        "Using Insecure Custom Trust Managers",
+        "Incorrect Error Handling",
+        "Third-Party Libraries"
+      ],
+      "mitigations": [
+        "Enforce Strict Certificate Validation",
+        "Avoid Accepting Self-Signed Certificates",
+        "Enable Hostname Verification",
+        "Use Standard Trust Managers",
+        "Handle Validation Errors Properly"
+      ],
+      "url": "https://mas.owasp.org/MASWE/MASVS-NETWORK/MASWE-0027/"
+    },
+    {
+      "id": "MASWE-0028",
+      "title": "Insecure Identity Pinning",
+      "requirement": "The app correctly implements identity pinning.",
+      "group": "NETWORK",
+      "controls": [
+        "MASVS-NETWORK-2"
+      ],
+      "platforms": [
+        "android",
+        "ios"
+      ],
+      "cwe": [
+        295
+      ],
+      "modes": [
+        "Improper Configuration of Pinning Libraries",
+        "Dynamic Pinning without Security",
+        "Improper Validation Logic",
+        "Lack of Backup Pins"
+      ],
+      "mitigations": [
+        "Prefer Platform-Provided Solutions",
+        "Use Trusted Pinning Libraries",
+        "Secure Dynamic Pinning",
+        "Pin to Public Keys Instead of Certificates",
+        "Enforce Pinning Consistently",
+        "Regularly Update Pins",
+        "Implement Backup Pins"
+      ],
+      "url": "https://mas.owasp.org/MASWE/MASVS-NETWORK/MASWE-0028/"
+    },
+    {
+      "id": "MASWE-0029",
+      "title": "Insecure Deep Links",
+      "requirement": "The app securely handles deep links.",
+      "group": "PLATFORM",
+      "controls": [
+        "MASVS-CODE-4",
+        "MASVS-PLATFORM-1",
+        "MASVS-STORAGE-2"
+      ],
+      "platforms": [
+        "android",
+        "ios"
+      ],
+      "cwe": [
+        939,
+        917
+      ],
+      "modes": [
+        "Unverified Custom URL Schemes",
+        "Missing Domain Association",
+        "Unvalidated Deep Link Input"
+      ],
+      "mitigations": [
+        "Use Verified Link Mechanisms",
+        "Validate and Sanitize Deep Link Input",
+        "Validate the Source Where Possible",
+        "Keep Secrets Out of Deep Links"
+      ],
+      "url": "https://mas.owasp.org/MASWE/MASVS-PLATFORM/MASWE-0029/"
+    },
+    {
+      "id": "MASWE-0030",
+      "title": "Improper Use of the Clipboard",
+      "requirement": "The app uses the clipboard securely and only with user consent.",
+      "group": "PLATFORM",
+      "controls": [
+        "MASVS-PLATFORM-1",
+        "MASVS-STORAGE-2"
+      ],
+      "platforms": [
+        "android",
+        "ios"
+      ],
+      "cwe": [
+        200,
+        668
+      ],
+      "modes": [
+        "Sensitive Data Copyable Without User Consent",
+        "Clipboard Content Not Marked Sensitive",
+        "Universal Clipboard Not Restricted",
+        "Clipboard Not Cleared",
+        "Untrusted Clipboard Input"
+      ],
+      "mitigations": [
+        "Avoid the Clipboard for Secrets",
+        "Only Copy with User Consent",
+        "Mark Clipboard Content as Sensitive",
+        "Specify an appropriate expiration",
+        "Restrict Clipboard Exposure",
+        "Validate Pasted Data"
+      ],
+      "url": "https://mas.owasp.org/MASWE/MASVS-PLATFORM/MASWE-0030/"
+    },
+    {
+      "id": "MASWE-0031",
+      "title": "Allowing Untrusted App Extensions",
+      "requirement": "The app only permits trusted app extensions to interact with it.",
+      "group": "PLATFORM",
+      "controls": [
+        "MASVS-PLATFORM-1",
+        "MASVS-STORAGE-2"
+      ],
+      "platforms": [
+        "ios"
+      ],
+      "cwe": [
+        829
+      ],
+      "modes": [
+        "All Extension Points Allowed",
+        "Third-Party Keyboards Allowed for Sensitive Input",
+        "Sensitive Data Handed to Extensions"
+      ],
+      "mitigations": [
+        "Restrict Extension Points",
+        "Keep Sensitive Input on the System Keyboard",
+        "Minimize Data Shared with Extensions"
+      ],
+      "url": "https://mas.owasp.org/MASWE/MASVS-PLATFORM/MASWE-0031/"
+    },
+    {
+      "id": "MASWE-0032",
+      "title": "Insecure Intents",
+      "requirement": "The app securely handles intents.",
+      "group": "PLATFORM",
+      "controls": [
+        "MASVS-PLATFORM-1",
+        "MASVS-STORAGE-2"
+      ],
+      "platforms": [
+        "android"
+      ],
+      "cwe": [
+        927,
+        940
+      ],
+      "modes": [
+        "Implicit Intents for Internal Communication",
+        "Intent Redirection",
+        "Mutable PendingIntents",
+        "Replayable PendingIntents",
+        "Sticky Broadcasts"
+      ],
+      "mitigations": [
+        "Use Explicit Intents Internally",
+        "Validate Redirected Intents",
+        "Create Immutable, Explicit PendingIntents",
+        "Avoid Sticky Broadcasts"
+      ],
+      "url": "https://mas.owasp.org/MASWE/MASVS-PLATFORM/MASWE-0032/"
+    },
+    {
+      "id": "MASWE-0033",
+      "title": "Sensitive Native Functionality Exposed in WebViews",
+      "requirement": "The app does not expose sensitive native functionality to WebView content.",
+      "group": "PLATFORM",
+      "controls": [
+        "MASVS-PLATFORM-2",
+        "MASVS-STORAGE-2"
+      ],
+      "platforms": [
+        "android",
+        "ios"
+      ],
+      "cwe": [
+        749,
+        94
+      ],
+      "modes": [
+        "Bridges Reachable by Untrusted Content",
+        "Unvalidated Bridge Messages",
+        "Globally Exposed Bridge Mechanisms",
+        "App-Owned Bridge Scripts in the Page World",
+        "Sensitive Data in Bridge Replies",
+        "Over-Exposed Bridges"
+      ],
+      "mitigations": [
+        "Minimize the Bridge Surface",
+        "Restrict Bridges to Trusted Origins",
+        "Validate Bridge Messages",
+        "Prefer Modern Messaging APIs",
+        "Isolate App-Owned Bridge Scripts"
+      ],
+      "url": "https://mas.owasp.org/MASWE/MASVS-PLATFORM/MASWE-0033/"
+    },
+    {
+      "id": "MASWE-0034",
+      "title": "WebViews Allow Access to Local Resources with Untrusted Content",
+      "requirement": "The app only allows trusted WebView content to access local resources.",
+      "group": "PLATFORM",
+      "controls": [
+        "MASVS-CODE-4",
+        "MASVS-PLATFORM-2",
+        "MASVS-STORAGE-2"
+      ],
+      "platforms": [
+        "android",
+        "ios"
+      ],
+      "cwe": [
+        22,
+        79,
+        200,
+        669
+      ],
+      "modes": [
+        "File Access Enabled with Untrusted Content",
+        "Universal Access from File URLs",
+        "Insecure Custom Resource Loading",
+        "Overly Broad File Read Grants"
+      ],
+      "mitigations": [
+        "Disable File and Content Access",
+        "Use a Safe Asset Loader",
+        "Scope File Read Access Narrowly",
+        "Separate Trusted and Untrusted Content"
+      ],
+      "url": "https://mas.owasp.org/MASWE/MASVS-PLATFORM/MASWE-0034/"
+    },
+    {
+      "id": "MASWE-0035",
+      "title": "WebViews Loading Untrusted Content",
+      "requirement": "The app only allows trusted content in WebViews.",
+      "group": "PLATFORM",
+      "controls": [
+        "MASVS-CODE-4",
+        "MASVS-PLATFORM-2"
+      ],
+      "platforms": [
+        "android",
+        "ios"
+      ],
+      "cwe": [
+        79,
+        601,
+        829
+      ],
+      "modes": [
+        "Unrestricted Navigation",
+        "Untrusted URLs from External Input",
+        "Untrusted Script Inclusion",
+        "Safe Browsing Disabled",
+        "Deprecated WebView Components"
+      ],
+      "mitigations": [
+        "Allowlist Navigation",
+        "Validate Externally Supplied URLs",
+        "Load Scripts Only from Trusted Sources",
+        "Keep Platform Protections Enabled"
+      ],
+      "url": "https://mas.owasp.org/MASWE/MASVS-PLATFORM/MASWE-0035/"
+    },
+    {
+      "id": "MASWE-0036",
+      "title": "Unnecessary Exposure of Sensitive Data via the User Interface",
+      "requirement": "The app does not unnecessarily expose sensitive data through its user interface.",
+      "group": "PLATFORM",
+      "controls": [
+        "MASVS-PLATFORM-3",
+        "MASVS-STORAGE-2"
+      ],
+      "platforms": [
+        "android",
+        "ios"
+      ],
+      "cwe": [
+        200,
+        359
+      ],
+      "modes": [
+        "Non-Secure Text Entry",
+        "Unmasked Sensitive Values"
+      ],
+      "mitigations": [
+        "Use Secure Text Entry for Secrets",
+        "Minimize Visual Disclosure"
+      ],
+      "url": "https://mas.owasp.org/MASWE/MASVS-PLATFORM/MASWE-0036/"
+    },
+    {
+      "id": "MASWE-0037",
+      "title": "Unnecessary Exposure of Sensitive Data via Notifications",
+      "requirement": "The app does not unnecessarily expose sensitive data through system notifications.",
+      "group": "PLATFORM",
+      "controls": [
+        "MASVS-PLATFORM-3",
+        "MASVS-STORAGE-2"
+      ],
+      "platforms": [
+        "android",
+        "ios"
+      ],
+      "cwe": [
+        200,
+        359
+      ],
+      "modes": [
+        "Sensitive Content in Notifications",
+        "No Lock-Screen Redaction"
+      ],
+      "mitigations": [
+        "Minimize Notification Content",
+        "Configure Lock-Screen/Preview Redaction"
+      ],
+      "url": "https://mas.owasp.org/MASWE/MASVS-PLATFORM/MASWE-0037/"
+    },
+    {
+      "id": "MASWE-0038",
+      "title": "Insufficient Protection of Sensitive Data from Screenshots or Screen Recordings",
+      "requirement": "The app removes or masks sensitive data from its views when moved to the background, when being recorded or when a screenshot is taken.",
+      "group": "PLATFORM",
+      "controls": [
+        "MASVS-PLATFORM-3",
+        "MASVS-STORAGE-2"
+      ],
+      "platforms": [
+        "android",
+        "ios"
+      ],
+      "cwe": [
+        200,
+        359
+      ],
+      "modes": [
+        "Missing Platform Screenshot Protection",
+        "Missing Capture-State Redaction",
+        "Excessive On-Screen Disclosure"
+      ],
+      "mitigations": [
+        "Redact Sensitive On-Screen Content",
+        "Anti-Screenshot Platform Protections"
+      ],
+      "url": "https://mas.owasp.org/MASWE/MASVS-PLATFORM/MASWE-0038/"
+    },
+    {
+      "id": "MASWE-0039",
+      "title": "App Vulnerable to Overlay Attacks",
+      "requirement": "The app protects its sensitive screens against overlay attacks.",
+      "group": "PLATFORM",
+      "controls": [
+        "MASVS-CODE-1",
+        "MASVS-PLATFORM-3"
+      ],
+      "platforms": [
+        "android",
+        "ios"
+      ],
+      "cwe": [
+        1021
+      ],
+      "modes": [
+        "Touch Filtering Not Enabled",
+        "External Overlays Not Hidden",
+        "Sensitive Screens Not Protected"
+      ],
+      "mitigations": [
+        "Enable Touch Filtering on Sensitive Views",
+        "Hide External Overlays",
+        "Protect Sensitive Screens",
+        "Use Trusted Confirmation Paths for Critical Actions"
+      ],
+      "url": "https://mas.owasp.org/MASWE/MASVS-PLATFORM/MASWE-0039/"
+    },
+    {
+      "id": "MASWE-0040",
+      "title": "Sensitive Data Leaked via Accessibility Services",
+      "requirement": "The app prevents sensitive data from being exposed to, or captured by, accessibility services.",
+      "group": "PLATFORM",
+      "controls": [
+        "MASVS-PLATFORM-3",
+        "MASVS-STORAGE-2"
+      ],
+      "platforms": [
+        "android",
+        "ios"
+      ],
+      "cwe": [
+        200,
+        359
+      ],
+      "modes": [
+        "Secrets in Accessibility Metadata",
+        "Sensitive Fields Not Using Secure Input",
+        "High-Risk Flows Fully Automatable",
+        "System Keyboards Exposing Sensitive Input"
+      ],
+      "mitigations": [
+        "Keep Secrets Out of Accessibility Metadata",
+        "Use Secure Input Fields",
+        "Add Friction to High-Risk Flows",
+        "Preserve Legitimate Accessibility",
+        "Use Custom Passcode Inputs",
+        "Use Custom Passcode Inputs"
+      ],
+      "url": "https://mas.owasp.org/MASWE/MASVS-PLATFORM/MASWE-0040/"
+    },
+    {
+      "id": "MASWE-0041",
+      "title": "Running on a Recent Platform Version Not Ensured",
+      "requirement": "The app detects if it is running on an unsupported OS version and reacts appropriately.",
+      "group": "CODE",
+      "controls": [
+        "MASVS-CODE-1"
+      ],
+      "platforms": [
+        "android",
+        "ios"
+      ],
+      "cwe": [
+        451,
+        693,
+        1104,
+        1357
+      ],
+      "modes": [
+        "Low Minimum Version with Modern Assumptions",
+        "Known-Vulnerable Platform Versions Supported"
+      ],
+      "mitigations": [
+        "Raise the Minimum Platform Version",
+        "Gate Sensitive Features by Version",
+        "Reassess the Minimum Regularly"
+      ],
+      "url": "https://mas.owasp.org/MASWE/MASVS-CODE/MASWE-0041/"
+    },
+    {
+      "id": "MASWE-0042",
+      "title": "Latest Platform Version Not Targeted",
+      "requirement": "The app targets the latest platform version.",
+      "group": "CODE",
+      "controls": [
+        "MASVS-CODE-1"
+      ],
+      "platforms": [
+        "android",
+        "ios"
+      ],
+      "cwe": [
+        693,
+        1357
+      ],
+      "modes": [
+        "Outdated Target Version",
+        "Compatibility Behaviors Left in Place"
+      ],
+      "mitigations": [
+        "Target the Latest Platform Version",
+        "Adopt New Protections"
+      ],
+      "url": "https://mas.owasp.org/MASWE/MASVS-CODE/MASWE-0042/"
+    },
+    {
+      "id": "MASWE-0043",
+      "title": "Enforced Updating Not Implemented",
+      "requirement": "The app detects if it must be updated and reacts appropriately.",
+      "group": "CODE",
+      "controls": [
+        "MASVS-CODE-2"
+      ],
+      "platforms": [
+        "android",
+        "ios"
+      ],
+      "cwe": [
+        602,
+        693
+      ],
+      "modes": [
+        "No Enforced-Update Mechanism"
+      ],
+      "mitigations": [
+        "Implement an Enforced Update Flow",
+        "Enforce the Minimum Version Server-Side",
+        "Distinguish Flexible and Immediate Updates"
+      ],
+      "url": "https://mas.owasp.org/MASWE/MASVS-CODE/MASWE-0043/"
+    },
+    {
+      "id": "MASWE-0044",
+      "title": "Dependencies with Known Vulnerabilities",
+      "requirement": "The app's third-party components are regularly checked for known vulnerabilities.",
+      "group": "CODE",
+      "controls": [
+        "MASVS-CODE-3"
+      ],
+      "platforms": [
+        "android",
+        "ios"
+      ],
+      "cwe": [
+        1395,
+        1357
+      ],
+      "modes": [
+        "Direct Dependencies",
+        "Transitive Dependencies",
+        "Dynamically Loaded Dependencies",
+        "Outdated Platform Security Components",
+        "Usage of Third-Party Frameworks"
+      ],
+      "mitigations": [
+        "Use a Software Bill of Materials (SBOM)",
+        "Update Dependencies Responsibly",
+        "Remove Unused or Obsolete Dependencies",
+        "Use Trusted Sources"
+      ],
+      "url": "https://mas.owasp.org/MASWE/MASVS-CODE/MASWE-0044/"
+    },
+    {
+      "id": "MASWE-0045",
+      "title": "Compiler-Provided Security Features Not Used",
+      "requirement": "The app uses the compiler-provided security features of the platform.",
+      "group": "CODE",
+      "controls": [
+        "MASVS-CODE-3",
+        "MASVS-CODE-4"
+      ],
+      "platforms": [
+        "android",
+        "ios"
+      ],
+      "cwe": [],
+      "modes": [
+        "Missing Stack Protection",
+        "Missing PIE/ASLR Support",
+        "Missing Fortified Functions",
+        "Unsafe Memory Management Choices"
+      ],
+      "mitigations": [
+        "Enable Compiler Mitigations",
+        "Keep Memory-Safety Features On"
+      ],
+      "url": "https://mas.owasp.org/MASWE/MASVS-CODE/MASWE-0045/"
+    },
+    {
+      "id": "MASWE-0046",
+      "title": "Use of Deprecated APIs or Functionality",
+      "requirement": "The app does not use deprecated APIs or functionality.",
+      "group": "CODE",
+      "controls": [
+        "MASVS-CODE-3",
+        "MASVS-CRYPTO-2"
+      ],
+      "platforms": [
+        "android",
+        "ios"
+      ],
+      "cwe": [
+        327,
+        477,
+        522
+      ],
+      "modes": [
+        "Deprecated Cryptographic Providers",
+        "Deprecated Platform APIs",
+        "Deprecation Warnings Ignored"
+      ],
+      "mitigations": [
+        "Migrate Off Deprecated APIs",
+        "Treat Deprecation Warnings as Actionable",
+        "Follow Platform Release Notes",
+        "Test the App on All Supported Platforms"
+      ],
+      "url": "https://mas.owasp.org/MASWE/MASVS-CODE/MASWE-0046/"
+    },
+    {
+      "id": "MASWE-0047",
+      "title": "Using Non-Standard APIs for Security-Critical Functionality",
+      "requirement": "The app uses standard APIs for security-critical functionality.",
+      "group": "CODE",
+      "controls": [
+        "MASVS-AUTH-1",
+        "MASVS-CODE-3",
+        "MASVS-CRYPTO-1",
+        "MASVS-NETWORK-1"
+      ],
+      "platforms": [
+        "android",
+        "ios"
+      ],
+      "cwe": [
+        287,
+        326,
+        327,
+        1240
+      ],
+      "modes": [
+        "Roll-Your-Own Cryptography",
+        "Custom Networking or TLS Stacks",
+        "Custom DNS Resolution",
+        "Custom Authentication",
+        "Unmaintained Security Libraries"
+      ],
+      "mitigations": [
+        "Use Platform Security APIs",
+        "Choose Vetted, Standards-Compliant Libraries",
+        "Never Roll Your Own Crypto or TLS",
+        "Leverage Secure Platform Defaults"
+      ],
+      "url": "https://mas.owasp.org/MASWE/MASVS-CODE/MASWE-0047/"
+    },
+    {
+      "id": "MASWE-0048",
+      "title": "Malicious Code Included in the App",
+      "requirement": "The app package does not contain malicious code.",
+      "group": "CODE",
+      "controls": [
+        "MASVS-CODE-3"
+      ],
+      "platforms": [
+        "android",
+        "ios"
+      ],
+      "cwe": [
+        506,
+        507,
+        511
+      ],
+      "modes": [
+        "Malicious Developer",
+        "Compromised Dependencies",
+        "Compromised Build Pipeline",
+        "Hidden Functionality"
+      ],
+      "mitigations": [
+        "Review Code and Changes",
+        "Examine the Supply Chain",
+        "Protect the Build Pipeline",
+        "Analyze the Shipped Artifact"
+      ],
+      "url": "https://mas.owasp.org/MASWE/MASVS-CODE/MASWE-0048/"
+    },
+    {
+      "id": "MASWE-0049",
+      "title": "Unsafe Dynamic Code Loading",
+      "requirement": "The app loads dynamic code safely from trusted sources.",
+      "group": "CODE",
+      "controls": [
+        "MASVS-CODE-4"
+      ],
+      "platforms": [
+        "android",
+        "ios"
+      ],
+      "cwe": [
+        494
+      ],
+      "modes": [
+        "Loading from Writable or External Locations",
+        "Downloaded Code Without Verification",
+        "Code from Other Packages"
+      ],
+      "mitigations": [
+        "Avoid Dynamic Code Loading",
+        "Load Only from Protected Locations",
+        "Verify Integrity and Authenticity"
+      ],
+      "url": "https://mas.owasp.org/MASWE/MASVS-CODE/MASWE-0049/"
+    },
+    {
+      "id": "MASWE-0050",
+      "title": "Unsafe Handling of Untrusted Data",
+      "requirement": "The app securely handles untrusted data.",
+      "group": "CODE",
+      "controls": [
+        "MASVS-CODE-4"
+      ],
+      "platforms": [
+        "android",
+        "ios"
+      ],
+      "cwe": [
+        20,
+        22,
+        73,
+        89,
+        116,
+        345,
+        348,
+        349,
+        502,
+        611,
+        924
+      ],
+      "modes": [
+        "Missing Validation at Trust Boundaries",
+        "Untrusted Data in Queries",
+        "Untrusted Paths and Archives",
+        "Insecure Parsing",
+        "Insecure Deserialization",
+        "Weakly Validated URI Handling",
+        "Unsafe Presentation of Untrusted Data"
+      ],
+      "mitigations": [
+        "Validate at Every Trust Boundary",
+        "Use Parameterized Queries",
+        "Canonicalize and Contain Paths",
+        "Harden Parsers",
+        "Deserialize Safely",
+        "Distinguish Untrusted Data From Application-Generated Content"
+      ],
+      "url": "https://mas.owasp.org/MASWE/MASVS-CODE/MASWE-0050/"
+    },
+    {
+      "id": "MASWE-0051",
+      "title": "Root/Jailbreak Detection Not Implemented",
+      "requirement": "The app detects if it runs on a rooted/jailbroken device and reacts appropriately.",
+      "group": "RESILIENCE",
+      "controls": [
+        "MASVS-RESILIENCE-1",
+        "MASVS-RESILIENCE-4"
+      ],
+      "platforms": [
+        "android",
+        "ios"
+      ],
+      "cwe": [
+        1326
+      ],
+      "modes": [
+        "No Detection Implemented",
+        "Naive or Single-Point Checks",
+        "No Response Strategy"
+      ],
+      "mitigations": [
+        "Implement Layered Detection",
+        "Respond Appropriately",
+        "Combine with Attestation",
+        "Assess Effectiveness"
+      ],
+      "url": "https://mas.owasp.org/MASWE/MASVS-RESILIENCE/MASWE-0051/"
+    },
+    {
+      "id": "MASWE-0052",
+      "title": "App Virtualization Environment Detection Not Implemented",
+      "requirement": "The app detects when it is running inside an app-virtualization environment.",
+      "group": "RESILIENCE",
+      "controls": [
+        "MASVS-RESILIENCE-1"
+      ],
+      "platforms": [
+        "android",
+        "ios"
+      ],
+      "cwe": [
+        693
+      ],
+      "modes": [
+        "No Virtualization Checks",
+        "Known Frameworks Not Detected",
+        "No Response Strategy"
+      ],
+      "mitigations": [
+        "Detect Environment Anomalies",
+        "Check for Known Frameworks",
+        "Respond to Detection",
+        "Assess Effectiveness",
+        "Attest Application Integrity"
+      ],
+      "url": "https://mas.owasp.org/MASWE/MASVS-RESILIENCE/MASWE-0052/"
+    },
+    {
+      "id": "MASWE-0053",
+      "title": "Emulated or Virtual Device Detection Not Implemented",
+      "requirement": "The app detects when it is running in an emulated or virtual device environment.",
+      "group": "RESILIENCE",
+      "controls": [
+        "MASVS-RESILIENCE-1",
+        "MASVS-RESILIENCE-4"
+      ],
+      "platforms": [
+        "android",
+        "ios"
+      ],
+      "cwe": [],
+      "modes": [
+        "No Emulator Checks",
+        "Single-Source Detection Signals",
+        "No Response Strategy"
+      ],
+      "mitigations": [
+        "Detect Emulator Characteristics",
+        "Respond to Detection",
+        "Combine with Attestation",
+        "Assess Effectiveness"
+      ],
+      "url": "https://mas.owasp.org/MASWE/MASVS-RESILIENCE/MASWE-0053/"
+    },
+    {
+      "id": "MASWE-0054",
+      "title": "Device Attestation Not Implemented",
+      "requirement": "The app implements device attestation.",
+      "group": "RESILIENCE",
+      "controls": [
+        "MASVS-RESILIENCE-1"
+      ],
+      "platforms": [
+        "android",
+        "ios"
+      ],
+      "cwe": [],
+      "modes": [
+        "No Attestation Integrated",
+        "Client-Side-Only Verification",
+        "Missing Freshness Guarantees",
+        "Verdicts Not Enforced",
+        "Incomplete Evidence Validation"
+      ],
+      "mitigations": [
+        "Integrate Platform Attestation",
+        "Verify Server-Side with Freshness",
+        "Gate Sensitive Operations on Verdicts",
+        "Layer with Local Checks"
+      ],
+      "url": "https://mas.owasp.org/MASWE/MASVS-RESILIENCE/MASWE-0054/"
+    },
+    {
+      "id": "MASWE-0055",
+      "title": "Malware Detection Not Implemented",
+      "requirement": "The app detects attacks by malware.",
+      "group": "RESILIENCE",
+      "controls": [
+        "MASVS-RESILIENCE-2"
+      ],
+      "platforms": [
+        "android",
+        "ios"
+      ],
+      "cwe": [
+        693
+      ],
+      "modes": [
+        "No Hostile-Environment Checks",
+        "Abuse-Prone Capabilities Ignored",
+        "No Response Strategy",
+        "Insufficient Response Strategy"
+      ],
+      "mitigations": [
+        "Integrate Platform Threat Signals",
+        "Assess Risky Capabilities",
+        "Respond Proportionately",
+        "Lock Down Account",
+        "Assess Effectiveness"
+      ],
+      "url": "https://mas.owasp.org/MASWE/MASVS-RESILIENCE/MASWE-0055/"
+    },
+    {
+      "id": "MASWE-0056",
+      "title": "App Attestation Not Implemented",
+      "requirement": "The app implements app attestation.",
+      "group": "RESILIENCE",
+      "controls": [
+        "MASVS-RESILIENCE-2"
+      ],
+      "platforms": [
+        "android",
+        "ios"
+      ],
+      "cwe": [
+        347
+      ],
+      "modes": [
+        "No Packaged App Integrity Verification or Attestation",
+        "No Server-Verified App Integrity Signal",
+        "Missing or Partial Server Attestation Verification or Enforcement",
+        "Outdated Signing Schemes"
+      ],
+      "mitigations": [
+        "Verify Packaged App Integrity",
+        "Use Platform App Attestation",
+        "Use Current Signing Schemes",
+        "Respond to Failed Checks"
+      ],
+      "url": "https://mas.owasp.org/MASWE/MASVS-RESILIENCE/MASWE-0056/"
+    },
+    {
+      "id": "MASWE-0057",
+      "title": "App Resources Integrity Not Verified",
+      "requirement": "The app verifies the integrity of its resources.",
+      "group": "RESILIENCE",
+      "controls": [
+        "MASVS-CODE-4",
+        "MASVS-RESILIENCE-2"
+      ],
+      "platforms": [
+        "android",
+        "ios"
+      ],
+      "cwe": [
+        471
+      ],
+      "modes": [
+        "Sandbox Files Not Verified",
+        "Downloaded Resources Not Verified",
+        "Restored Data Not Revalidated",
+        "Verification Result Ignored"
+      ],
+      "mitigations": [
+        "Verify Resource Integrity",
+        "Authenticate Downloaded Content",
+        "Treat Restored Data as Untrusted",
+        "Respond to Failed Checks"
+      ],
+      "url": "https://mas.owasp.org/MASWE/MASVS-RESILIENCE/MASWE-0057/"
+    },
+    {
+      "id": "MASWE-0058",
+      "title": "Runtime Code Integrity Not Verified",
+      "requirement": "The app detects unauthorized changes to its code and execution flow at runtime.",
+      "group": "RESILIENCE",
+      "controls": [
+        "MASVS-RESILIENCE-2"
+      ],
+      "platforms": [
+        "android",
+        "ios"
+      ],
+      "cwe": [],
+      "modes": [
+        "No Runtime Code Checks",
+        "Injected Libraries or Executable Mappings Not Detected",
+        "Hooked Functions Not Detected",
+        "No Response to Tampering"
+      ],
+      "mitigations": [
+        "Verify Code Segments at Runtime",
+        "Detect Injection and Hooking",
+        "Layer and Protect the Checks",
+        "Respond to Detection"
+      ],
+      "url": "https://mas.owasp.org/MASWE/MASVS-RESILIENCE/MASWE-0058/"
+    },
+    {
+      "id": "MASWE-0059",
+      "title": "Code Obfuscation Not Implemented",
+      "requirement": "The app implements code obfuscation.",
+      "group": "RESILIENCE",
+      "controls": [
+        "MASVS-RESILIENCE-3"
+      ],
+      "platforms": [
+        "android",
+        "ios"
+      ],
+      "cwe": [
+        693
+      ],
+      "modes": [
+        "No Obfuscation Applied",
+        "Security-Relevant Logic Left Readable",
+        "Obfuscation Without Hardening"
+      ],
+      "mitigations": [
+        "Enable Obfuscation for Release Builds",
+        "Harden Security-Relevant Code",
+        "Implement Lossy Obfuscation",
+        "Assess Obfuscation Effectiveness",
+        "Combine with Runtime Protections"
+      ],
+      "url": "https://mas.owasp.org/MASWE/MASVS-RESILIENCE/MASWE-0059/"
+    },
+    {
+      "id": "MASWE-0060",
+      "title": "Resource Obfuscation Not Implemented",
+      "requirement": "The app applies resource obfuscation to hinder reverse engineering.",
+      "group": "RESILIENCE",
+      "controls": [
+        "MASVS-RESILIENCE-3"
+      ],
+      "platforms": [
+        "android",
+        "ios"
+      ],
+      "cwe": [
+        693
+      ],
+      "modes": [
+        "Resources Left in Clear",
+        "Identifiers Left Meaningful"
+      ],
+      "mitigations": [
+        "Obfuscate Sensitive Resources",
+        "Obfuscate Resource Identifiers",
+        "Validate Resource Integrity"
+      ],
+      "url": "https://mas.owasp.org/MASWE/MASVS-RESILIENCE/MASWE-0060/"
+    },
+    {
+      "id": "MASWE-0061",
+      "title": "Debug Artifacts Not Removed",
+      "requirement": "The app does not contain debug artifacts.",
+      "group": "RESILIENCE",
+      "controls": [
+        "MASVS-RESILIENCE-3"
+      ],
+      "platforms": [
+        "android",
+        "ios"
+      ],
+      "cwe": [
+        489,
+        497,
+        540,
+        912,
+        1295
+      ],
+      "modes": [
+        "Verbose Logging and Debug Flows",
+        "Testing Utilities Enabled",
+        "Debugging Symbols Not Stripped",
+        "Backdoors or Hidden Switches and Debug Menus"
+      ],
+      "mitigations": [
+        "Strip Symbols and Debug Code",
+        "Disable Verbose Logging in Production",
+        "Remove Testing Utilities",
+        "Eliminate Backdoors"
+      ],
+      "url": "https://mas.owasp.org/MASWE/MASVS-RESILIENCE/MASWE-0061/"
+    },
+    {
+      "id": "MASWE-0062",
+      "title": "No Application-Level Payload Encryption",
+      "requirement": "The app applies application-level payload encryption in addition to transport-layer encryption.",
+      "group": "RESILIENCE",
+      "controls": [
+        "MASVS-NETWORK-1",
+        "MASVS-RESILIENCE-3"
+      ],
+      "platforms": [
+        "android",
+        "ios"
+      ],
+      "cwe": [
+        319
+      ],
+      "modes": [
+        "TLS-Only Protection",
+        "No Integrity Binding on Requests"
+      ],
+      "mitigations": [
+        "Encrypt Sensitive Payloads at the Application Layer",
+        "Sign Security-Relevant Requests",
+        "Treat It as Defense in Depth"
+      ],
+      "url": "https://mas.owasp.org/MASWE/MASVS-RESILIENCE/MASWE-0062/"
+    },
+    {
+      "id": "MASWE-0063",
+      "title": "Debug Mechanisms Not Disabled",
+      "requirement": "The app disables debug mechanisms.",
+      "group": "RESILIENCE",
+      "controls": [
+        "MASVS-PLATFORM-2",
+        "MASVS-RESILIENCE-4"
+      ],
+      "platforms": [
+        "android",
+        "ios"
+      ],
+      "cwe": [
+        489
+      ],
+      "modes": [
+        "Misconfigured Build Settings",
+        "WebView or JavaScript Debugging Enabled"
+      ],
+      "mitigations": [
+        "Disable Application Debugging in Release Builds",
+        "Disable WebView and JavaScript Content Debugging in Release Builds"
+      ],
+      "url": "https://mas.owasp.org/MASWE/MASVS-RESILIENCE/MASWE-0063/"
+    },
+    {
+      "id": "MASWE-0064",
+      "title": "Debugger Detection Not Implemented",
+      "requirement": "The app detects debugger attachment at runtime and responds to protect sensitive operations.",
+      "group": "RESILIENCE",
+      "controls": [
+        "MASVS-RESILIENCE-4"
+      ],
+      "platforms": [
+        "android",
+        "ios"
+      ],
+      "cwe": [],
+      "modes": [
+        "No Debugger Checks",
+        "One-Time or Single-Point Checks",
+        "No Response Strategy"
+      ],
+      "mitigations": [
+        "Implement Debugger Detection",
+        "Check Continuously",
+        "Respond to Detection",
+        "Assess Effectiveness"
+      ],
+      "url": "https://mas.owasp.org/MASWE/MASVS-RESILIENCE/MASWE-0064/"
+    },
+    {
+      "id": "MASWE-0065",
+      "title": "Dynamic Analysis Tools Detection Not Implemented",
+      "requirement": "The app detects dynamic analysis tools and responds to protect sensitive operations.",
+      "group": "RESILIENCE",
+      "controls": [
+        "MASVS-RESILIENCE-4"
+      ],
+      "platforms": [
+        "android",
+        "ios"
+      ],
+      "cwe": [],
+      "modes": [
+        "No Instrumentation Checks",
+        "Artifact Checks Missing or Shallow",
+        "No Response Strategy"
+      ],
+      "mitigations": [
+        "Detect Instrumentation Artifacts",
+        "Check Continuously and Diversify",
+        "Respond to Detection",
+        "Assess Effectiveness"
+      ],
+      "url": "https://mas.owasp.org/MASWE/MASVS-RESILIENCE/MASWE-0065/"
+    },
+    {
+      "id": "MASWE-0066",
+      "title": "Inadequate Permission Management",
+      "requirement": "The app adequately manages permissions.",
+      "group": "PRIVACY",
+      "controls": [
+        "MASVS-PRIVACY-1"
+      ],
+      "platforms": [
+        "android",
+        "ios"
+      ],
+      "cwe": [
+        250
+      ],
+      "modes": [
+        "Requesting Excessive Permissions",
+        "Lack of Use of Privacy-Friendly Alternatives",
+        "Retaining Unneeded Permissions",
+        "Inadequate Permission Explanations",
+        "Third-Party Permission Requirements",
+        "Excessive AI Agent Permissions",
+        "Unjustified Full Access in a Bundled Keyboard"
+      ],
+      "mitigations": [
+        "Limit Permissions to Essential Needs",
+        "Prefer Privacy-Friendly Alternatives",
+        "Enable Proactive Permission Revocation",
+        "Implement Just-in-Time Permission Requests",
+        "Add Proper Permission Explanations",
+        "Avoid Full Access in Bundled Keyboards"
+      ],
+      "url": "https://mas.owasp.org/MASWE/MASVS-PRIVACY/MASWE-0066/"
+    },
+    {
+      "id": "MASWE-0067",
+      "title": "Lack of Anonymization or Pseudonymisation Measures",
+      "requirement": "The app uses anonymization or pseudonymisation measures.",
+      "group": "PRIVACY",
+      "controls": [
+        "MASVS-PRIVACY-2"
+      ],
+      "platforms": [
+        "android",
+        "ios"
+      ],
+      "cwe": [
+        359
+      ],
+      "modes": [
+        "Identifiers Not Removed",
+        "Pseudonymization Implemented Insecurely",
+        "Sensitive Metadata Not Removed",
+        "Sensitive Data Not Redacted Before Sending to AI Services"
+      ],
+      "mitigations": [
+        "Use Anonymisation and Pseudonymisation",
+        "Redact Sensitive Data Before Sending to AI Services"
+      ],
+      "url": "https://mas.owasp.org/MASWE/MASVS-PRIVACY/MASWE-0067/"
+    },
+    {
+      "id": "MASWE-0068",
+      "title": "Incorrect Use of Identifiers for User Tracking",
+      "requirement": "The app does not use persistent or unique identifiers in a way that enables user tracking.",
+      "group": "PRIVACY",
+      "controls": [
+        "MASVS-PRIVACY-2"
+      ],
+      "platforms": [
+        "android",
+        "ios"
+      ],
+      "cwe": [
+        359
+      ],
+      "modes": [
+        "Use of Non-Resettable Identifiers",
+        "Misuse of Resettable Identifiers",
+        "Linking Identifiers Across Services",
+        "Tracking Without User Consent"
+      ],
+      "mitigations": [
+        "Use Resettable Identifiers",
+        "Use App-Scoped Identifiers",
+        "Use Advertising ID Appropriately",
+        "Use Appropriate APIs",
+        "Treat Third-Party SDKs as Your Own Code",
+        "Provide Clear Privacy Information"
+      ],
+      "url": "https://mas.owasp.org/MASWE/MASVS-PRIVACY/MASWE-0068/"
+    },
+    {
+      "id": "MASWE-0069",
+      "title": "Usage of Non-Privacy-Preserving Functionality",
+      "requirement": "The app uses privacy-preserving functionality.",
+      "group": "PRIVACY",
+      "controls": [
+        "MASVS-PRIVACY-2"
+      ],
+      "platforms": [
+        "android",
+        "ios"
+      ],
+      "cwe": [
+        359
+      ],
+      "modes": [
+        "Embedded Authentication Flows",
+        "Broad Permissions Instead of Pickers",
+        "Remote Processing Instead of On-Device AI",
+        "Over-Exposing API Choices"
+      ],
+      "mitigations": [
+        "Use System Authentication Sessions",
+        "Prefer System Pickers",
+        "Prefer On-Device Processing",
+        "Choose Least-Exposing APIs"
+      ],
+      "url": "https://mas.owasp.org/MASWE/MASVS-PRIVACY/MASWE-0069/"
+    },
+    {
+      "id": "MASWE-0070",
+      "title": "Inadequate Awareness for Privacy Relevant Actions",
+      "requirement": "The app informs the user about the privacy implications before performing an action.",
+      "group": "PRIVACY",
+      "controls": [
+        "MASVS-PRIVACY-2"
+      ],
+      "platforms": [
+        "android",
+        "ios"
+      ],
+      "cwe": [
+        359
+      ],
+      "modes": [
+        "Unclear Disclosure Context",
+        "Insufficient Disclosure Review and Feedback"
+      ],
+      "mitigations": [
+        "Provide Clear Disclosure Context and Control",
+        "Support Review and Reversal of Consequential Disclosures"
+      ],
+      "url": "https://mas.owasp.org/MASWE/MASVS-PRIVACY/MASWE-0070/"
+    },
+    {
+      "id": "MASWE-0071",
+      "title": "Inadequate Defaults for Privacy Relevant Actions",
+      "requirement": "The app uses adequate defaults for privacy relevant actions.",
+      "group": "PRIVACY",
+      "controls": [
+        "MASVS-PRIVACY-2"
+      ],
+      "platforms": [
+        "android",
+        "ios"
+      ],
+      "cwe": [
+        359
+      ],
+      "modes": [
+        "Unclear Disclosure Context",
+        "Overly Exposing Defaults"
+      ],
+      "mitigations": [
+        "Provide Clear Disclosure Context and Control",
+        "Use Privacy Protective Defaults"
+      ],
+      "url": "https://mas.owasp.org/MASWE/MASVS-PRIVACY/MASWE-0071/"
+    },
+    {
+      "id": "MASWE-0072",
+      "title": "Inadequate Privacy Policy",
+      "requirement": "The app provides an adequate privacy policy.",
+      "group": "PRIVACY",
+      "controls": [
+        "MASVS-PRIVACY-3"
+      ],
+      "platforms": [
+        "android",
+        "ios"
+      ],
+      "cwe": [
+        359
+      ],
+      "modes": [
+        "Unclear or Absent Privacy Policy",
+        "Discrepancies in Policy vs Behavior"
+      ],
+      "mitigations": [
+        "Provide a Clear Privacy Policy",
+        "Ensure Consistency in Policy vs Behavior"
+      ],
+      "url": "https://mas.owasp.org/MASWE/MASVS-PRIVACY/MASWE-0072/"
+    },
+    {
+      "id": "MASWE-0073",
+      "title": "Inadequate Data Collection Declarations",
+      "requirement": "The app adequately declares all user collected data.",
+      "group": "PRIVACY",
+      "controls": [
+        "MASVS-PRIVACY-1",
+        "MASVS-PRIVACY-3"
+      ],
+      "platforms": [
+        "android",
+        "ios"
+      ],
+      "cwe": [
+        359
+      ],
+      "modes": [
+        "Undeclared Data Collection and Purpose",
+        "Discrepancies in Declarations vs Behavior"
+      ],
+      "mitigations": [
+        "Maintain Accurate Privacy Labels"
+      ],
+      "url": "https://mas.owasp.org/MASWE/MASVS-PRIVACY/MASWE-0073/"
+    },
+    {
+      "id": "MASWE-0074",
+      "title": "Inadequate Tracking Domains Declarations",
+      "requirement": "The app adequately declares all tracking domains it connects to.",
+      "group": "PRIVACY",
+      "controls": [
+        "MASVS-PRIVACY-3"
+      ],
+      "platforms": [
+        "android",
+        "ios"
+      ],
+      "cwe": [
+        359
+      ],
+      "modes": [
+        "Missing or Incomplete Declarations"
+      ],
+      "mitigations": [
+        "Declare All Tracking Domains"
+      ],
+      "url": "https://mas.owasp.org/MASWE/MASVS-PRIVACY/MASWE-0074/"
+    },
+    {
+      "id": "MASWE-0075",
+      "title": "Non-Reproducible Builds",
+      "requirement": "The app offers reproducible builds.",
+      "group": "PRIVACY",
+      "controls": [
+        "MASVS-PRIVACY-3"
+      ],
+      "platforms": [
+        "android",
+        "ios"
+      ],
+      "cwe": [
+        1357,
+        494
+      ],
+      "modes": [
+        "Source Code Not Available",
+        "Non-Deterministic Build Outputs",
+        "Unpinned Build Environments",
+        "No Provenance or Attestation",
+        "Applying Non-Deterministic Obfuscation Controls"
+      ],
+      "mitigations": [
+        "Make Source Code Available",
+        "Make Builds Deterministic",
+        "Pin and Document the Build Environment",
+        "Publish Provenance and Attestations",
+        "Use Deterministic Obfuscation Techniques"
+      ],
+      "url": "https://mas.owasp.org/MASWE/MASVS-PRIVACY/MASWE-0075/"
+    },
+    {
+      "id": "MASWE-0076",
+      "title": "Lack of Proper Data Management Controls",
+      "requirement": "The app provides adequate controls to manage user data.",
+      "group": "PRIVACY",
+      "controls": [
+        "MASVS-PRIVACY-4"
+      ],
+      "platforms": [
+        "android",
+        "ios"
+      ],
+      "cwe": [
+        359
+      ],
+      "modes": [
+        "Lack of Proper Data Management Settings"
+      ],
+      "mitigations": [
+        "Implement Data Management Mechanisms",
+        "Regularly Update Data Management Features",
+        "Provide a User-Friendly Data Management Interface"
+      ],
+      "url": "https://mas.owasp.org/MASWE/MASVS-PRIVACY/MASWE-0076/"
+    },
+    {
+      "id": "MASWE-0077",
+      "title": "Inadequate Data Visibility Controls",
+      "requirement": "The app provides adequate controls over the visibility of user data.",
+      "group": "PRIVACY",
+      "controls": [
+        "MASVS-PRIVACY-4"
+      ],
+      "platforms": [
+        "android",
+        "ios"
+      ],
+      "cwe": [
+        359
+      ],
+      "modes": [
+        "Lack of Granular Privacy Settings"
+      ],
+      "mitigations": [
+        "Offer Granular Privacy Settings",
+        "Educate Users on Privacy Options"
+      ],
+      "url": "https://mas.owasp.org/MASWE/MASVS-PRIVACY/MASWE-0077/"
+    },
+    {
+      "id": "MASWE-0078",
+      "title": "Inadequate or Ambiguous User Consent Mechanisms",
+      "requirement": "The app requests user consent prior to any data processing.",
+      "group": "PRIVACY",
+      "controls": [
+        "MASVS-PRIVACY-4"
+      ],
+      "platforms": [
+        "android",
+        "ios"
+      ],
+      "cwe": [
+        200,
+        285,
+        358,
+        359
+      ],
+      "modes": [
+        "Failure to Prompt for Consent Changes",
+        "Ambiguous Consent Mechanisms"
+      ],
+      "mitigations": [
+        "Prompt for Consent on Changes",
+        "Obtain Clear and Explicit User Consent for Immediate Actions",
+        "Ensure Informed and Transparent Consent"
+      ],
+      "url": "https://mas.owasp.org/MASWE/MASVS-PRIVACY/MASWE-0078/"
+    }
+  ]
+}

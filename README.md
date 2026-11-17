@@ -1,6 +1,6 @@
 # masvs
 
-A Claude Code plugin for OWASP MASVS mobile security audits, pentest/VAPT prep and remediation of findings. It covers Flutter, native Android (Kotlin/Java), native iOS (Swift/ObjC) and React Native apps.
+A Claude Code plugin for OWASP MASVS mobile security audits, pentest/VAPT prep and remediation of findings. Every finding is mapped to a MASVS control (what to achieve) and an OWASP MASWE weakness (what went wrong). It covers Flutter, native Android (Kotlin/Java), native iOS (Swift/ObjC) and React Native apps.
 
 ## What it does
 
@@ -8,7 +8,7 @@ A Claude Code plugin for OWASP MASVS mobile security audits, pentest/VAPT prep a
 |---|---|---|
 | `audit` | Scan the source and any APK/IPA, then write `findings.json`, a Markdown report and an optional .xlsx | "Audit this app for MASVS before the pentest" |
 | `remediate` | Take an auditor's findings, map each to a MASVS control, classify it (fix, already mitigated, false positive), apply fixes and fill in the response columns | "Here is the VAPT sheet, respond to each finding and fix what's real" |
-| `checklist` | Get a short per-feature checklist while coding | "I'm adding biometric login, what MASVS checks apply?" |
+| `checklist` | Get a short per-feature checklist, one item per MASWE weakness, while coding | "I'm adding biometric login, what MASVS checks apply?" |
 
 ## Install
 
@@ -58,12 +58,18 @@ A missing tool never fails a run. The script exits 0 with `{"skipped": "<reason>
 
 An excerpt of `report.md` (fake data):
 
-| Finding | MASVS Control | Severity | Status | Evidence |
-|---|---|---|---|---|
-| Backups enabled | MASVS-STORAGE-2 | Medium | Open | [verified] allow_backup: true in the built APK |
-| Cleartext traffic allowed | MASVS-NETWORK-1 | Medium | Open | [inferred] debug network config only, release not checked |
-| Plugin external-storage call | MASVS-STORAGE-1 | Info | False positive | [inferred] match is inside a third-party package |
-| Root detection bypass | MASVS-RESILIENCE-1 | Medium | Not run | [manual] needs a device and a hooking test |
+| Finding | MASVS Control | MASWE | Severity | Status | Evidence |
+|---|---|---|---|---|---|
+| Backups enabled | MASVS-STORAGE-2 | MASWE-0006 (Sensitive Data Not Excluded From Backup) | Medium | Open | [verified] allow_backup: true in the built APK |
+| Cleartext traffic allowed | MASVS-NETWORK-1 | MASWE-0026 (Network Traffic Not Encrypted) | Medium | Open | [inferred] debug network config only, release not checked |
+| Plugin external-storage call | MASVS-STORAGE-1 | MASWE-0002 (Sensitive Data Stored Unencrypted Outside of Private Storage) | Info | False positive | [inferred] match is inside a third-party package |
+| Root detection bypass | MASVS-RESILIENCE-1 | MASWE-0051 (Root/Jailbreak Detection Not Implemented) | Medium | Not run | [manual] needs a device and a hooking test |
+
+## MASVS, MASWE and MASTG
+
+- **MASVS** v2.1.0: the 24 controls a finding is filed under.
+- **MASWE** v1.0.0: all 78 weaknesses, with requirement, modes of introduction and mitigations (`skills/masvs/data/maswe.json`). Scan rules carry a default MASWE ID, and `make_report.py` rejects unknown IDs and warns when an ID doesn't belong to the finding's control.
+- **MASTG**: candidate tests per control, to read before citing.
 
 ## Evidence and pass/fail
 
@@ -88,7 +94,7 @@ Pressure scenarios and fixtures for the skill itself are in `evals/` (see `evals
 
 ## Attribution
 
-Content is based on OWASP MASVS, MASTG and MASWE (CC BY-SA 4.0), paraphrased, with control IDs cited. See `NOTICE`. The skill's own code is Apache-2.0 (`LICENSE`).
+Content is based on OWASP MASVS, MASTG and MASWE (CC BY-SA 4.0). Control summaries are paraphrased; the MASWE catalog quotes weakness titles and requirements. See `NOTICE`. The skill's own code is Apache-2.0 (`LICENSE`).
 
 ## Privacy
 

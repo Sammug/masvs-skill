@@ -8,6 +8,8 @@
 
 MASTG candidates: `mastg_tests` in `data/controls.json` (overlapping lists via MASWE). Test index: https://mas.owasp.org/MASTG/tests/
 
+MASWE weaknesses for this group (requirement, modes, mitigations): `references/maswe.md`, section PLATFORM; full entries in `data/maswe.json`. Scan matches carry their rule's MASWE ID.
+
 ## What to check
 
 - **Flutter**

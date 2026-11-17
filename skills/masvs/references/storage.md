@@ -7,6 +7,8 @@
 
 MASTG candidates: `mastg_tests` in `data/controls.json`. That list is mapped through shared MASWE ids, so it overlaps between controls and not every test applies to every app. Test index: https://mas.owasp.org/MASTG/tests/
 
+MASWE weaknesses for this group (requirement, modes, mitigations): `references/maswe.md`, section STORAGE; full entries in `data/maswe.json`. Scan matches carry their rule's MASWE ID.
+
 ## What to check
 
 Start with `scripts/scan_source.py <app>` and, when you have a build, `scripts/inspect_apk.py` / `scripts/inspect_ipa.py`. Re-run the scan with `--include-deps` only to attribute a match to a package (`owner`), not to widen the finding list.
@@ -28,7 +30,7 @@ Start with `scripts/scan_source.py <app>` and, when you have a build, `scripts/i
   - Files with sensitive content: data protection class and `isExcludedFromBackup`.
 - **React Native**
   - RN-STORAGE-1: AsyncStorage holding tokens. RN-LOG-1: console logging of secrets.
-- **All stacks**: SECRET-AWS-1, SECRET-GITLAB-1, SECRET-GITHUB-1, SECRET-GOOGLE-1, SECRET-SLACK-1, SECRET-JWT-1. These are flagged, not judged: decide whether the value is live, privileged, or a public client key (e.g. a restricted Maps/Firebase key is normal).
+- **All stacks**: SECRET-AWS-1, SECRET-GITLAB-1, SECRET-GITHUB-1, SECRET-GOOGLE-1, SECRET-SLACK-1, SECRET-JWT-1. These are flagged, not judged: decide whether the value is live, privileged, or a public client key (e.g. a restricted Maps/Firebase key is normal). A live secret that ships in the app (source under `lib/`, assets, or found in the APK/IPA) is MASWE-0004 under STORAGE-1; one only in repo files (CI config, scripts) stays STORAGE-2 with no MASWE.
 
 Manual tests (needs device):
 - Log in, use the sensitive flows, then pull the sandbox (`adb backup`/`bmgr` on a debuggable build, or a jailbroken/rooted test device) and grep for tokens, PII and amounts.

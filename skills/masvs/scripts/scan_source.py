@@ -57,6 +57,7 @@ class Rule:
         self.raw = raw
         self.id = raw["id"]
         self.control = raw["control"]
+        self.maswe = list(raw.get("maswe") or [])
         self.stacks = set(raw["stacks"])
         pattern = raw["pattern"]
         if pattern.startswith("@secret:"):
@@ -213,7 +214,7 @@ def scan(root, stacks=None, include_deps: bool = False) -> dict:
                 if key not in seen:
                     seen.add(key)
                     matches.append({
-                        "rule": r.id, "control": r.control, "file": rel, "line": 1,
+                        "rule": r.id, "control": r.control, "maswe": r.maswe, "file": rel, "line": 1,
                         "snippet": f"file present: {path.name}", "owner": owner_of(rel),
                         "status": "match",
                     })
@@ -239,7 +240,7 @@ def scan(root, stacks=None, include_deps: bool = False) -> dict:
             seen.add(key)
             status = "unresolved" if rule.unresolved and rule.unresolved.search(line) else "match"
             matches.append({
-                "rule": rule.id, "control": rule.control, "file": rel, "line": n,
+                "rule": rule.id, "control": rule.control, "maswe": rule.maswe, "file": rel, "line": n,
                 "snippet": "(pattern absent from file)" if absent_note else make_snippet(line, col),
                 "owner": owner, "status": status,
             })

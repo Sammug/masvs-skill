@@ -4,4 +4,10 @@ Copyright 2026 the masvs skill authors
 This skill references the OWASP Mobile Application Security (MAS) project:
 MASVS, MASTG and MASWE (https://mas.owasp.org/). Those works are licensed
 under CC BY-SA 4.0 (https://creativecommons.org/licenses/by-sa/4.0/) by the
-OWASP MAS project. Their content is paraphrased in this skill and cited by ID.
+OWASP MAS project. Their content is cited by ID in this skill.
+
+Control summaries are paraphrased. skills/masvs/data/maswe.json and
+skills/masvs/references/maswe.md are adapted from OWASP MASWE v1.0.0
+(https://github.com/OWASP/maswe): weakness titles and requirement statements
+are quoted, and the modes of introduction and mitigations are the source's
+headings. Those two files are licensed under CC BY-SA 4.0.

@@ -8,6 +8,8 @@
 
 MASTG candidates: `mastg_tests` in `data/controls.json` (AUTH-3 has none mapped; overlaps with PLATFORM-1 via shared MASWE ids). Test index: https://mas.owasp.org/MASTG/tests/
 
+MASWE weaknesses for this group (requirement, modes, mitigations): `references/maswe.md`, section AUTH; full entries in `data/maswe.json`. Scan matches carry their rule's MASWE ID.
+
 ## What to check
 
 There are no static rules for this group: most of it is server behaviour plus how the client binds local auth to secrets. Mark results as **needs manual test** unless you exercised the flow.

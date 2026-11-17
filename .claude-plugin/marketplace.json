@@ -9,7 +9,7 @@
       "name": "masvs",
       "source": "./",
       "description": "OWASP MASVS mobile security audits and pentest remediation for Flutter, Android, iOS and React Native apps.",
-      "version": "0.2.0"
+      "version": "0.3.0"
     }
   ]
 }

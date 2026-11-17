@@ -9,6 +9,8 @@
 
 MASTG candidates: `mastg_tests` in `data/controls.json` (RESILIENCE-1 and -4 overlap). Test index: https://mas.owasp.org/MASTG/tests/
 
+MASWE weaknesses for this group (requirement, modes, mitigations): `references/maswe.md`, section RESILIENCE; full entries in `data/maswe.json`. Scan matches carry their rule's MASWE ID.
+
 Be honest about this group. Every client-side check here can be bypassed by a motivated attacker with a rooted device and Frida. These controls raise cost; they are defence in depth on top of STORAGE, CRYPTO, AUTH and NETWORK, never a substitute. OWASP's MAS testing profiles put this group in the resilience (R) profile, meant for apps whose threat model calls for it (e.g. payments, high-value IP), not for every app.
 
 ## What to check
