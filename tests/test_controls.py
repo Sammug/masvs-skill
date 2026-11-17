@@ -61,3 +61,11 @@ def test_controls_md_matches_generator():
         [sys.executable, str(GEN)], capture_output=True, text=True, check=True
     ).stdout
     assert CONTROLS_MD.read_text() == out
+
+
+def test_mastg_tests_wellformed_and_mostly_mapped():
+    controls = load()
+    for c in controls:
+        assert all(re.fullmatch(r"MASTG-TEST-\d{4}", t) for t in c["mastg_tests"])
+        assert c["mastg_tests"] == sorted(set(c["mastg_tests"]))
+    assert sum(bool(c["mastg_tests"]) for c in controls) >= 15

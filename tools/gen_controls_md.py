@@ -13,6 +13,8 @@ def render(controls):
         "",
         "OWASP MASVS v2.1.0 (https://mas.owasp.org/MASVS/), CC BY-SA 4.0, paraphrased.",
         "",
+        "Version source: latest release tag of github.com/OWASP/masvs (v2.1.0). MASTG tests are mapped via shared MASWE ids.",
+        "",
         "| Control | Summary | MASWE | MASTG tests |",
         "|---|---|---|---|",
     ]
