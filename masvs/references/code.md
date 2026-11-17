@@ -22,7 +22,7 @@ MASTG candidates: `mastg_tests` in `data/controls.json` (CODE-3 and CODE-4 share
   - `./gradlew :app:dependencies` for transitive native libraries; outdated Play services / OkHttp / WebView-related libs.
   - SQL: `rawQuery`/`execSQL` with concatenation; `ContentProvider` selection args.
 - **iOS**
-  - IOS-HARDEN-1 (hint only): no `-fstack-protector` in the Podfile. Xcode already enables stack protection for Clang targets by default; verify the built binaries instead of trusting the hint.
+  - IOS-HARDEN-1 (hint only): no `-fstack-protector` in the Podfile. Clang usually enables a stack protector by default; verify the built binaries instead of trusting the hint.
   - `python3 scripts/inspect_ipa.py app.ipa` → per binary `pie`, `stack_canary`, `arc`, `kind`. `None` means not applicable (pure Swift, Dart AOT), not "missing".
   - `Podfile.lock` versions vs advisories.
 - **React Native**
@@ -38,11 +38,13 @@ Prefer removing a dependency over adding one, and config over code.
 
 | Issue | Flutter | Android | iOS | React Native |
 |---|---|---|---|---|
-| Vulnerable / risky transitive dep | Find the parent with `flutter pub deps`; replace or drop the parent. Example: an image-cache package (`cached_network_image` → `flutter_cache_manager` → `sqflite`) removed, images cached in app-private storage via the framework's image cache or a small file cache. No visible change. | Bump or exclude the transitive artifact; `dependencyInsight` to find who pulls it. | Bump the pod; drop pods you don't need. | `npm ls <pkg>`; `overrides`/`resolutions` for patched versions. |
+| Vulnerable / risky transitive dep | Find the parent with `flutter pub deps`; replace or drop the parent. Example: an image-cache package (`cached_network_image` → `flutter_cache_manager` → `sqflite`) removed, images cached via the framework's in-memory image cache or a small file cache in app-private storage. **UX change** with the in-memory cache only: images are re-downloaded after restart and unavailable offline; add the file cache if that matters. | Bump or exclude the transitive artifact; `dependencyInsight` to find who pulls it. | Bump the pod; drop pods you don't need. | `npm ls <pkg>`; `overrides`/`resolutions` for patched versions. |
 | SQL injection | Parameterised `rawQuery('... WHERE id = ?', [id])` or the query builder. | `?` placeholders / Room. | Bound parameters (`sqlite3_bind_*`, GRDB, Core Data predicates). | Parameterised queries in the SQLite library. |
 | minSdk | `minSdk = 29` (or the agreed floor) in `android/app/build.gradle`; product sign-off as it drops older devices. | same | Raise `IPHONEOS_DEPLOYMENT_TARGET` to the agreed floor. | same |
 | Stack canary flag (iOS pods) | Podfile `post_install` (below). | — | Same Podfile snippet; check app targets' build settings too (Clang usually enables a stack protector by default). | Same Podfile snippet. |
 | Forced update | Server-provided `min_version`; compare at launch, show blocking update screen only when below it. | Play In-App Updates (immediate). | Server `min_version` + App Store link. | same as Flutter |
+
+Merge this into the existing `post_install` block (a Podfile allows only one):
 
 ```ruby
 post_install do |installer|
@@ -55,7 +57,7 @@ post_install do |installer|
 end
 ```
 
-Stack canaries and Swift: Swift relies on memory safety and, unlike Clang for C/ObjC, adds stack protectors only to a narrow set of functions (and only in newer compilers), so Swift binaries often import neither `___stack_chk_*` symbol. `inspect_ipa.py` reports those as `None` (n/a) with a note. Swift frameworks with ObjC interop can report `False` even though only Swift code is in them; check whether the framework has any C/ObjC sources before treating it as a finding.
+Stack canaries and Swift: Swift relies on memory safety and, unlike Clang for C/ObjC, adds stack protectors only to a narrow set of functions (and only in newer compilers), so the `___stack_chk_*` symbols may be absent from Swift binaries (newer compilers can emit them). `inspect_ipa.py` reports pure Swift as `None` (n/a) with a note. Swift frameworks with ObjC interop can report `False` even though only Swift code is in them; check whether the framework has any C/ObjC sources before treating it as a finding.
 
 ## Evidence to show the auditor
 

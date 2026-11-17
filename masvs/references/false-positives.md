@@ -12,7 +12,7 @@ Commands assume you run from the skill directory (`scripts/...`) with `python3`.
 
 **Evidence:**
 - `python3 scripts/scan_source.py <app>`: no AND-STORAGE-1 match with `owner: app`.
-- `python3 scripts/scan_source.py ~/.pub-cache --include-deps --stacks android`: the AND-STORAGE-1 match reports `owner: path_provider_android` (filter with `jq '.matches[] | select(.rule=="AND-STORAGE-1") | {file, owner}'`).
+- `python3 scripts/scan_source.py ~/.pub-cache/hosted/pub.dev/path_provider_android-<locked version> --stacks android` (version from `pubspec.lock`): the AND-STORAGE-1 match is in the plugin's own sources. For an `owner` field, scan from `~/.pub-cache` with `--include-deps` and filter: `jq '.matches[] | select(.rule=="AND-STORAGE-1") | {file, owner}'`. A no-match is not proof of attribution; confirm the decompiled class's package.
 - `python3 scripts/inspect_apk.py app-release.apk`: `permissions` has no `READ_EXTERNAL_STORAGE`, `WRITE_EXTERNAL_STORAGE` or `MANAGE_EXTERNAL_STORAGE`.
 - `grep -rnE 'getExternalStorageDirectory|getExternalStoragePath' lib android/app/src` returns nothing; `flutter pub deps` shows which package pulls in the plugin.
 
@@ -32,41 +32,44 @@ Commands assume you run from the skill directory (`scripts/...`) with `python3`.
 
 ## Residual legacy cipher class (AES/CBC/PKCS5Padding in flutter_secure_storage)
 
-**Symptom:** "Insecure cipher mode AES/CBC/PKCS5Padding used" in `com.it_nomads.fluttersecurestorage.ciphers.*` (or similar) in the decompiled APK.
+**Symptom:** "Insecure cipher mode: AES/CBC with PKCS5/PKCS7 padding" reported in the secure-storage plugin's cipher classes in the decompiled APK (exact class and string vary by plugin version).
 
-**Why it's a false positive:** flutter_secure_storage < 10 uses a legacy AES-CBC scheme on Android for any instance created without `AndroidOptions(encryptedSharedPreferences: true)`. Once every instance sets that option, data is stored with EncryptedSharedPreferences (Keystore-backed, AES-GCM/SIV), and existing values are migrated on first read. The plugin keeps the legacy class in the binary only to read and migrate old data, so the string remains in the dex. If even one instance lacks the option, it is **not** a false positive: fix that instance (users are not logged out).
+**Why it's a false positive:** flutter_secure_storage < 10 uses a legacy AES-CBC scheme on Android for any instance created without `AndroidOptions(encryptedSharedPreferences: true)`. Once every instance sets that option, data is stored with EncryptedSharedPreferences (Keystore-backed, AES-GCM/SIV), and the plugin migrates existing values automatically (test the upgrade path on real devices). The plugin keeps the legacy class in the binary only to read and migrate old data, so the cipher string remains in the dex. Longer term, EncryptedSharedPreferences (Jetpack security-crypto) is deprecated and flutter_secure_storage ≥ 10 moves away from it; upgrading is the forward path. If even one instance lacks the option, it is **not** a false positive: fix that instance (users are not logged out).
 
 **Evidence:**
 - `python3 scripts/scan_source.py <app>`: zero FLT-STORAGE-2 matches.
-- `python3 scripts/scan_source.py <root containing the pub cache> --include-deps --stacks android`: any AND-CRYPTO-2 match has `owner: flutter_secure_storage`, none `owner: app`.
+- `python3 scripts/scan_source.py ~/.pub-cache/hosted/pub.dev/flutter_secure_storage-<locked version> --stacks android`: shows where the plugin's CBC code lives. Owner attribution needs a root above `hosted/` (e.g. `~/.pub-cache --include-deps`, slow on a large cache). A no-match from `scan_source.py` is not proof of attribution: the rule may simply not match that version's code; check the decompiled class's package name too.
+- Locked version: `grep -A3 '^  flutter_secure_storage:' pubspec.lock`.
 - Snippets of every `FlutterSecureStorage(...)` construction showing the option (including DI/factory code).
 
-**Response:** All secure-storage instances are configured to use the platform's Keystore-backed EncryptedSharedPreferences, and previously stored values are migrated automatically. The AES/CBC class remains in the binary only because the plugin ships it to migrate legacy data; the application does not use it for new storage. Configuration and scan evidence attached.
+**Response:** All secure-storage instances are configured to use the platform's Keystore-backed EncryptedSharedPreferences, and the plugin migrates previously stored values automatically (upgrade path tested on devices). The AES/CBC class remains in the binary only because the plugin ships it to migrate legacy data; the application does not use it for new storage. Configuration and scan evidence attached.
 
 ## StrandHogg 2.0 (CVE-2020-0096) when minSdk is 29 or higher
 
-**Symptom:** "App vulnerable to task hijacking (StrandHogg 2.0)", often based on `taskAffinity` / `launchMode` settings alone.
+**Symptom:** "App vulnerable to task hijacking (StrandHogg 2.0 / CVE-2020-0096)".
 
-**Why it's a false positive:** CVE-2020-0096 is an Android OS flaw affecting Android 8.0–9 and fixed in the April 2020 security patch. With minSdk 29 (Android 10) the app cannot be installed on affected versions. `taskAffinity=""` and `singleTop` on the launcher activity are defence in depth, not the primary mitigation.
+First separate the two issues. The original StrandHogg (2019) abuses `taskAffinity` and task reparenting and is not tied to an OS version; minSdk does **not** answer it. If the finding is about `taskAffinity`/task reparenting, it is real unless exported activities set `android:taskAffinity=""`: add that and verify it in the release APK's manifest (`aapt2 dump xmltree --file AndroidManifest.xml app-release.apk | grep -i taskAffinity`). This entry covers only StrandHogg 2.0.
+
+**Why it's a false positive:** CVE-2020-0096 is an Android OS flaw affecting Android 9 and earlier; the May 2020 Android Security Bulletin lists fixes for 8.0, 8.1 and 9. With minSdk 29 (Android 10) the app cannot be installed on an affected version. `taskAffinity=""` and `singleTop` are defence in depth, not the primary mitigation.
 
 **Evidence:**
 - `python3 scripts/inspect_apk.py app-release.apk`: `min_sdk` ≥ 29.
 - `python3 scripts/scan_source.py <app>`: no AND-SDK-1 match (or an unresolved one whose built value the APK confirms).
 
-**Response:** StrandHogg 2.0 (CVE-2020-0096) affects only Android 8.0–9; the application's minimum supported version is Android 10 (API 29), so it cannot run on an affected OS. The launcher activity additionally sets an empty task affinity as defence in depth. Manifest evidence attached.
+**Response:** StrandHogg 2.0 (CVE-2020-0096) affects only Android 8.0–9; the application's minimum supported version is Android 10 (API 29), so it cannot run on an affected OS. [Only if the release manifest shows it:] Exported activities additionally set an empty task affinity as defence in depth. Manifest evidence attached.
 
 ## Missing stack canaries in Swift or Swift/ObjC-interop frameworks
 
 **Symptom:** "Binary not compiled with stack canaries (`___stack_chk_guard` / `___stack_chk_fail` absent)" for the app executable or Swift pod frameworks.
 
-**Why it's a false positive:** stack canaries are a C/Objective-C mitigation added by Clang. Swift is memory-safe by default and its compiler adds stack protectors only for a narrow set of functions (and only in newer versions), so pure-Swift binaries commonly import neither symbol. Frameworks that mix Swift with Objective-C interop headers may also lack the symbols when they contain no C/ObjC functions that need a canary. Pod C/ObjC code is covered by adding `-fstack-protector-all` to `OTHER_CFLAGS` in the Podfile `post_install`.
+**Why it's a false positive:** stack canaries are a C/Objective-C mitigation added by Clang. Swift is memory-safe by default; newer Swift compilers can emit stack protectors, but only for a narrow set of functions, so the symbols may be absent from pure-Swift binaries. Frameworks that mix Swift with Objective-C interop headers may also lack the symbols when they contain no C/ObjC functions that need a canary. Pod C/ObjC code can be covered explicitly by adding `-fstack-protector-all` to `OTHER_CFLAGS` in the Podfile `post_install`.
 
 **Evidence:**
 - `python3 scripts/inspect_ipa.py app.ipa`: Swift-only binaries show `stack_canary: null` with the "pure Swift" note; C/ObjC binaries show `true`.
 - For an interop framework reporting `false`: list its sources (`find Pods/<Name> -name '*.m' -o -name '*.mm' -o -name '*.c'`) to show there is no C/ObjC, or show it was rebuilt with the Podfile flag and re-inspected.
-- The Podfile `post_install` snippet.
+- The Podfile `post_install` snippet, if that change was made.
 
-**Response:** The flagged binaries are written in Swift, which relies on memory safety rather than compiler-inserted stack canaries, so the canary symbols are not expected. All C/Objective-C code, including third-party pods, is compiled with `-fstack-protector-all`, and binaries containing such code show canaries in the attached inspection output.
+**Response:** The flagged binaries are written in Swift, which relies on memory safety rather than compiler-inserted stack canaries, so the canary symbols may be absent. Binaries containing C/Objective-C code show canaries in the attached inspection output. [Only if the Podfile change is present:] Third-party pods are additionally compiled with `-fstack-protector-all`.
 
 ## Certificate pinning bypassed with Frida/objection on a rooted device
 

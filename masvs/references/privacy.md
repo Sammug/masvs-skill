@@ -62,7 +62,7 @@ options.beforeBreadcrumb = (crumb, hint) {
 ```
 
 - Redact phone numbers, emails, currency amounts, payment/transaction references, bearer tokens, JWTs, and long digit runs. Replace with a fixed marker, not a hash of the value.
-- Reduce `event.user` to `{id: <opaque id>}`; drop `ipAddress`, `email`, `username`.
+- Reduce `event.user` to `{id: <opaque id>}`; drop `ipAddress`, `email`, `username`. Also disable IP address storage in the Sentry project's security/privacy settings, since the server may otherwise derive the IP from the incoming request.
 - The scrubber must never throw: depending on SDK and version, an exception there may drop the report, send it unscrubbed, or surface as a new error. Wrap the body and drop the event on failure. Unit-test it with sample payloads.
 - Option names vary by SDK version (replay moved between `experimental` and stable namespaces); check the installed version's API.
 

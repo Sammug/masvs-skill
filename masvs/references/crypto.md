@@ -34,8 +34,8 @@ Manual tests: decompile the release build (jadx, or `strings` on the iOS binary)
 
 | Issue | Flutter | Android | iOS | React Native |
 |---|---|---|---|---|
-| Secure-storage legacy cipher | `AndroidOptions(encryptedSharedPreferences: true)` on every instance; existing data migrates on first read, no forced logout. | — | — | — |
-| Weak mode / no integrity | AES-GCM via `cryptography` or platform channel to Keystore/Keychain. | `AES/GCM/NoPadding` with a 12-byte random IV per message; key in `AndroidKeyStore`. | CryptoKit `AES.GCM` (or `ChaChaPoly`); key in Keychain/Secure Enclave. | Native module wrapping the platform APIs, or a maintained library using AES-GCM. |
+| Secure-storage legacy cipher | `AndroidOptions(encryptedSharedPreferences: true)` on every instance; the plugin migrates existing data automatically, so no forced logout is expected. Test the upgrade path from the store build on real devices. Jetpack security-crypto (EncryptedSharedPreferences) is deprecated and flutter_secure_storage ≥ 10 moves away from it, so upgrading to ≥ 10 (following its migration notes) is the forward path; the option is the smallest fix on < 10. | — | — | — |
+| Weak mode / no integrity | AES-GCM via `cryptography` or platform channel to Keystore/Keychain. | `AES/GCM/NoPadding`, key in `AndroidKeyStore`. Keystore keys use randomized encryption and reject a caller-supplied IV: let the cipher generate it and store `cipher.iv` with the ciphertext. | CryptoKit `AES.GCM` (or `ChaChaPoly`); key in Keychain/Secure Enclave. | Native module wrapping the platform APIs, or a maintained library using AES-GCM. |
 | Weak hash for security | `crypto` package SHA-256; HMAC-SHA256 for integrity. | `SHA-256`; `Mac.getInstance("HmacSHA256")`. | CryptoKit `SHA256` / `HMAC<SHA256>`. | Same, via a native-backed library. |
 | Insecure RNG | `Random.secure()`. | `SecureRandom`. | `SecRandomCopyBytes` / CryptoKit. | `crypto.getRandomValues` (with a native polyfill). |
 | Hard-coded key | Move the secret server-side, or derive per-install keys in Keystore/Keychain. | Keystore-generated key, non-exportable. | Keychain / Secure Enclave key. | Native keystore wrapper. |

@@ -18,7 +18,7 @@ MASTG candidates: `mastg_tests` in `data/controls.json` (overlapping lists via M
   - AND-IPC-1: exported component without a permission. Confirm with `inspect_apk.py` → `exported` (permission or `"unknown"` per entry). Plugin-contributed components show up only in the merged manifest.
   - Mutable `PendingIntent`s, implicit intents carrying sensitive extras, `FileProvider` paths broader than needed.
   - AND-WEBVIEW-1 (JS bridge), AND-WEBVIEW-2 (JS enabled), AND-WEBVIEW-3 (file/universal access from file URLs).
-  - Task hijacking (StrandHogg 2.0, CVE-2020-0096) affects Android 8–9 only. AND-SDK-1 flags minSdk < 29; check `inspect_apk.py` → `min_sdk`.
+  - Task hijacking comes in two forms. StrandHogg 2.0 (CVE-2020-0096) is an OS flaw in Android 9 and earlier (fixes for 8.0, 8.1, 9 in the May 2020 bulletin); AND-SDK-1 flags minSdk < 29, check `inspect_apk.py` → `min_sdk`. The original StrandHogg (2019, `taskAffinity` + task reparenting) is not version-bound: check that exported activities set `android:taskAffinity=""` in the release manifest.
   - `FLAG_SECURE` on screens showing card data, balances, OTPs; notification visibility on the lock screen.
 - **iOS**
   - Custom URL schemes / universal links handled without validating parameters; `UIPasteboard` (IOS-PASTE-1, see `storage.md`).
@@ -37,7 +37,8 @@ Manual tests: `adb shell am start -n <pkg>/<exported activity>` with crafted ext
 | Exported component | Fix in `android/app/src/main/AndroidManifest.xml` (Android column); for a plugin's component, redeclare it with `android:exported="false"` and `tools:replace="android:exported"`, only if the feature doesn't need outside callers. | `android:exported="false"`, or protect with a `signature` permission; validate all extras. | — | As Android. |
 | Deep link to sensitive action | Route through the same auth guard as in-app navigation; never auto-execute actions from link params. | Same in the handling activity. | Same in `scene(_:openURLContexts:)` / `application(_:continue:)`. | Same in the Linking handler. |
 | WebView | Load only your origins; restrict `NavigationDelegate`; expose minimal JS channels and validate the calling URL. | `setAllowFileAccess(false)`, no universal file access, `addJavascriptInterface` only for trusted content. | `WKWebView` only; check `message.frameInfo.securityOrigin` in handlers. | Explicit `originWhitelist`; validate `onMessage` origin. |
-| StrandHogg 2.0 | `minSdk 29` in `android/app/build.gradle` | `minSdk 29` mitigates; `android:taskAffinity=""` and `launchMode="singleTop"` on the launcher activity are defence in depth. Raising minSdk drops Android 8–9 users: confirm with product first. | — | As Android. |
+| StrandHogg 2.0 | `minSdk 29` in `android/app/build.gradle` | `minSdk 29` rules out 2.0; `launchMode="singleTop"` is defence in depth. Raising minSdk drops Android 9-and-earlier users: confirm with product first. | — | As Android. |
+| StrandHogg (original, taskAffinity) | Android column, in `android/app/src/main/AndroidManifest.xml`. | `android:taskAffinity=""` on exported activities; verify in the release APK. minSdk does not fix this one. | — | As Android. |
 | Screenshots / app switcher | Apply `FLAG_SECURE` per sensitive route via a platform channel or plugin. | `window.addFlags(WindowManager.LayoutParams.FLAG_SECURE)` on sensitive screens only. | Cover the window with a blur/placeholder view on `sceneWillResignActive`, remove on `sceneDidBecomeActive`. | A maintained privacy-screen library. |
 | Keyboard caching | `enableSuggestions: false`, `autocorrect: false` on sensitive fields. | `inputType` with `textNoSuggestions` / password types. | `autocorrectionType = .no`, `isSecureTextEntry` for secrets. | `autoCorrect={false}`, `secureTextEntry`. |
 
@@ -45,14 +46,14 @@ UX note: app-wide `FLAG_SECURE` blocks user screenshots everywhere and is visibl
 
 ## Evidence to show the auditor
 
-- `python3 scripts/inspect_apk.py app-release.apk` → `exported` list where each entry has a permission or is the launcher; `min_sdk` ≥ 29 for StrandHogg.
+- `python3 scripts/inspect_apk.py app-release.apk` → `exported` list where each entry has a permission or is the launcher; `min_sdk` ≥ 29 for StrandHogg 2.0; `taskAffinity=""` on exported activities (aapt2 xmltree) for the original StrandHogg.
 - Manifest diff for `exported`/`taskAffinity`/`launchMode`.
 - Screenshots: app switcher showing the blur; a black capture (or "can't take screenshot" toast) on a `FLAG_SECURE` screen.
 - `adb shell am start ...` output showing the call rejected (SecurityException or redirect to login).
 
 ## Common false positives
 
-See `false-positives.md` for StrandHogg 2.0 when minSdk ≥ 29.
+See `false-positives.md` for StrandHogg 2.0 when minSdk ≥ 29 (not the original, taskAffinity-based StrandHogg).
 
 Also common:
 - Exported launcher activity, or components exported by Firebase/Play services that are protected by a signature or system permission. Check the `exported` entry's permission field before accepting the finding.

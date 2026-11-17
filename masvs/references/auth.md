@@ -37,10 +37,16 @@ Manual tests: replay a logged-out token; call a privileged endpoint with another
 
 | Issue | Flutter | Android | iOS | React Native |
 |---|---|---|---|---|
-| Event-bound biometrics | Store the secret behind a biometric-gated key (a plugin that uses Keystore/Keychain access control), or have biometrics unlock a device-bound credential the server verifies (signed challenge or long-lived device token exchanged server-side). Same prompt, so no UX change. | `BiometricPrompt` + `CryptoObject` on an auth-bound Keystore key. | Keychain item with `SecAccessControl`; reading it shows the same Face ID prompt. | A library that binds to Keystore/Keychain access control. |
+| Event-bound biometrics | Store the secret behind a biometric-gated key (a plugin that uses Keystore/Keychain access control), or have biometrics unlock a device-bound credential the server verifies (signed challenge or long-lived device token exchanged server-side). **UX change, needs product sign-off** (see below). | `BiometricPrompt` + `CryptoObject` on an auth-bound Keystore key. | Keychain item with `SecAccessControl`; reading it shows the same Face ID prompt. | A library that binds to Keystore/Keychain access control. |
 | Local-only logout | Call the revoke endpoint, then clear storage; tolerate offline by clearing locally and revoking on next launch. | same | same | same |
-| Embedded login WebView | `flutter_appauth` (or equivalent) with PKCE. | AppAuth + Custom Tabs. | `ASWebAuthenticationSession`. | `react-native-app-auth`. |
-| No step-up on sensitive actions | Reuse the existing PIN/biometric prompt before the action and send proof (signed challenge or fresh short-lived token) the server checks. | same | same | same |
+| Embedded login WebView (**UX change**: system browser sheet, and on iOS a consent prompt) | `flutter_appauth` (or equivalent) with PKCE. | AppAuth + Custom Tabs. | `ASWebAuthenticationSession`. | `react-native-app-auth`. |
+| No step-up on sensitive actions (**UX change**: adds a prompt) | Reuse the existing PIN/biometric prompt before the action and send proof (signed challenge or fresh short-lived token) the server checks. | same | same | same |
+
+Key-bound biometrics are not UX-neutral:
+- A `CryptoObject` requires Class 3 (strong) biometrics. Devices with only Class 2 sensors (many face-unlock phones) lose biometric login.
+- Device-credential (PIN/pattern) fallback together with a `CryptoObject` needs API 30+.
+- `setInvalidatedByBiometricEnrollment(true)` (Android) and `.biometryCurrentSet` (iOS) invalidate the key when a new fingerprint/face is enrolled, forcing a re-login.
+Get product sign-off on these before shipping.
 
 Server fixes (token lifetimes, revocation, IDOR checks, OTP rate limits) need no client release. Prefer them.
 

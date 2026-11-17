@@ -12,6 +12,7 @@ MASTG candidates: `mastg_tests` in `data/controls.json` (overlapping lists, mapp
 - **Flutter**
   - FLT-TLS-1: `badCertificateCallback`/`validateCertificate` that returns `true`.
   - Dart's `HttpClient` (and `http`/`dio` on top of it) does its own TLS. It does **not** read Android's network security config. NSC pins protect only platform-side traffic (OkHttp, `HttpURLConnection`, native SDKs). Check pinning in the Dart layer separately.
+  - Likewise on iOS, ATS and `NSPinnedDomains` cover URLSession traffic, not Dart's `HttpClient`.
   - Each flavor/environment has its own pin set and host list; a dev pin set must not ship in prod.
 - **Android**
   - AND-NET-1 (`usesCleartextTraffic`), AND-NET-2 (no NSC), AND-NET-3 (NSC permits cleartext). Unresolved placeholders: check `inspect_apk.py` → `uses_cleartext`, `network_security_config`.

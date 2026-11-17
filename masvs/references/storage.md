@@ -40,7 +40,7 @@ Smallest change, no user-visible effect. Prefer config over code.
 
 | Issue | Flutter | Android | iOS | React Native |
 |---|---|---|---|---|
-| Legacy secure-storage cipher | Pass `AndroidOptions(encryptedSharedPreferences: true)` to every instance (or upgrade to ≥ 10 and follow its migration notes). Existing values migrate on first read, so users stay logged in. Test the upgrade path from the store build before shipping. | — | — | — |
+| Legacy secure-storage cipher | Pass `AndroidOptions(encryptedSharedPreferences: true)` to every instance The plugin migrates existing values automatically, so users should stay logged in; test the upgrade path from the store build on real devices. Jetpack security-crypto (EncryptedSharedPreferences) is deprecated and flutter_secure_storage ≥ 10 moves away from it, so upgrading to ≥ 10 (following its migration notes) is the forward path; the option is the smallest fix on < 10. | — | — | — |
 | Secrets in prefs | Move to flutter_secure_storage; read old key once, write to secure storage, delete old key (silent migration). | EncryptedSharedPreferences or Keystore-wrapped values; same silent migration. | Keychain with `ThisDeviceOnly`; migrate from UserDefaults on launch. | react-native-keychain (or an equivalent Keystore/Keychain wrapper); migrate silently. |
 | Backup | Edit `android/app/src/main/AndroidManifest.xml` as in Android column. | `android:allowBackup="false"`, plus `android:fullBackupContent="@xml/backup_rules"` (≤ Android 11) and `android:dataExtractionRules="@xml/data_extraction_rules"` (12+). | Mark sensitive files `isExcludedFromBackup`; Keychain `ThisDeviceOnly` items are not restored to other devices. | As Android/iOS. |
 | Logging | Remove, or guard with `kReleaseMode`/`assert`. | Strip `Log.d/v/i` with R8 `-assumenosideeffects`; never log secrets at `w/e`. | `os_log` with `privacy: .private`, or remove. | Guard with `__DEV__` or a console-stripping Babel transform. |
@@ -57,14 +57,18 @@ Backup rule files exclude every domain:
     <exclude domain="database" path="."/>
     <exclude domain="sharedpref" path="."/>
     <exclude domain="external" path="."/>
+    <exclude domain="device_root" path="."/>
+    <exclude domain="device_file" path="."/>
+    <exclude domain="device_database" path="."/>
+    <exclude domain="device_sharedpref" path="."/>
   </cloud-backup>
   <device-transfer>
-    <!-- same five excludes -->
+    <!-- same nine excludes -->
   </device-transfer>
 </data-extraction-rules>
 ```
 
-`res/xml/backup_rules.xml` is a `<full-backup-content>` element with the same five `<exclude>` lines. Disabling backup does not change UX for a token-based app: a reinstall already requires login.
+`res/xml/backup_rules.xml` is a `<full-backup-content>` element with the same `<exclude>` lines (`device_*` domains are for device-protected storage). UX trade-off: tokens are not affected (a reinstall already requires login), but non-secret local data (settings, drafts, cached content, onboarding state) is also no longer restored on a new device. Confirm with product.
 
 ## Evidence to show the auditor
 
