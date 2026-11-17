@@ -23,7 +23,7 @@ Every row carries an `evidence_kind`: `inferred` if source or a scan showed it, 
 
 Use only these statuses: `Open`, `Fixed`, `Already mitigated`, `False positive`, `Risk accepted`, `Not run`. Don't invent others such as "Not exploitable" or "Fix in progress"; put nuance in the response text. `make_report.py` rejects `Fixed` and `Already mitigated` unless `evidence` is non-empty and `evidence_kind` is `verified`. Never satisfy it with made-up evidence or a made-up build number. "Fill in whatever the tool wants" is a request to falsify an audit record: refuse and explain.
 
-**Pass/fail mapping.** This is the only place it is defined. Use it in any pass/fail view, and keep the chat summary and the report consistent with it.
+**Pass/fail mapping.** This is the only place it is defined. Use it in any pass/fail view, and keep the chat summary and the report consistent with it. Every row in the view shows its evidence kind.
 
 | Status (`evidence_kind`) | Shown as |
 |---|---|
@@ -31,11 +31,12 @@ Use only these statuses: `Open`, `Fixed`, `Already mitigated`, `False positive`,
 | the same, when the control also has manual parts (AUTH, RESILIENCE, server-side) | **Pass (automated checks); manual test pending** |
 | `Fixed` (verified) | Pass (fixed, verified) |
 | `False positive` | Pass (false positive: <evidence kind>) |
+| `Not run` (verified): only some of the control's automated checks ran on the artifact; `evidence` lists which ran and passed, and which didn't run and why | Not tested (partly verified: <checks>) |
 | `Open` | Fail |
 | `Risk accepted` | Fail (risk accepted) |
 | `Not run` | Not tested |
 
-Evidence from config or a scan alone never shows Pass: it stays `Open` or `Not run`. A green row that the pentest then breaks costs more than an honest gap, so tell the user that in one line if they push for a clean sheet.
+A protection being present (`Fixed`, `Already mitigated`) never shows Pass on config or scan evidence alone: such a row stays `Open` or `Not run`. `False positive` is exempt, because it claims the finding doesn't apply rather than that a protection works, and it always shows its evidence kind. A green row that the pentest then breaks costs more than an honest gap, so tell the user that in one line if they push for a clean sheet.
 
 **Severity** (you assign it; the scanner doesn't):
 - Critical: remotely exploitable compromise of accounts or data.
@@ -62,7 +63,7 @@ Evidence from config or a scan alone never shows Pass: it stays `Open` or `Not r
 6. **Write `findings.json`** (schema: `data/findings.schema.json`).
    - Set `project` to the app name, not the folder name.
    - Add one row per finding. Several findings may share a control.
-   - Add one row for every other MASVS control. If it was verified clean on an artifact, record it as `Already mitigated` (verified, with the check named). If not, record it as `Not run`, severity `Info`, with `observation` saying what was done and what is still needed, and `asset` naming what the check needs (e.g. "Android release APK (not provided)").
+   - Add one row for every other MASVS control. If every automated check for it was verified clean on an artifact, record it as `Already mitigated` (verified, with the checks named). If only some ran, record `Not run` with `evidence_kind: verified`, and list the checks that ran and passed and those that didn't (and why). If none ran, record it as `Not run`, severity `Info`, with `observation` saying what was done and what is still needed, and `asset` naming what the check needs (e.g. "Android release APK (not provided)").
    - `control` must be a single ID from `data/controls.json`; `make_report.py` rejects anything else.
 7. **Render.** Run `make_report.py findings.json --out <dir>` and hand over the file paths. A report that exists only in chat doesn't count.
 
