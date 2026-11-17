@@ -30,7 +30,7 @@ Commands assume you run from the skill directory (`scripts/...`) with `python3`.
 
 **Response:** App.framework contains ahead-of-time compiled Dart code and no Objective-C, so ARC does not apply to it; Dart memory is managed by its own runtime. All Objective-C/Swift binaries in the bundle use ARC, as shown in the attached binary inspection output.
 
-## Residual legacy cipher class (AES/CBC/PKCS5Padding in flutter_secure_storage)
+## Residual legacy cipher class (AES/CBC with PKCS5/PKCS7 padding in flutter_secure_storage)
 
 **Symptom:** "Insecure cipher mode: AES/CBC with PKCS5/PKCS7 padding" reported in the secure-storage plugin's cipher classes in the decompiled APK (exact class and string vary by plugin version).
 
@@ -39,7 +39,7 @@ Commands assume you run from the skill directory (`scripts/...`) with `python3`.
 **Evidence:**
 - `python3 scripts/scan_source.py <app>`: zero FLT-STORAGE-2 matches.
 - `python3 scripts/scan_source.py ~/.pub-cache/hosted/pub.dev/flutter_secure_storage-<locked version> --stacks android`: shows where the plugin's CBC code lives. Owner attribution needs a root above `hosted/` (e.g. `~/.pub-cache --include-deps`, slow on a large cache). A no-match from `scan_source.py` is not proof of attribution: the rule may simply not match that version's code; check the decompiled class's package name too.
-- Locked version: `grep -A3 '^  flutter_secure_storage:' pubspec.lock`.
+- Locked version: `awk '/^  flutter_secure_storage:/{f=1} f&&/version:/{print;exit}' pubspec.lock`.
 - Snippets of every `FlutterSecureStorage(...)` construction showing the option (including DI/factory code).
 
 **Response:** All secure-storage instances are configured to use the platform's Keystore-backed EncryptedSharedPreferences, and the plugin migrates previously stored values automatically (upgrade path tested on devices). The AES/CBC class remains in the binary only because the plugin ships it to migrate legacy data; the application does not use it for new storage. Configuration and scan evidence attached.
@@ -48,7 +48,7 @@ Commands assume you run from the skill directory (`scripts/...`) with `python3`.
 
 **Symptom:** "App vulnerable to task hijacking (StrandHogg 2.0 / CVE-2020-0096)".
 
-First separate the two issues. The original StrandHogg (2019) abuses `taskAffinity` and task reparenting and is not tied to an OS version; minSdk does **not** answer it. If the finding is about `taskAffinity`/task reparenting, it is real unless exported activities set `android:taskAffinity=""`: add that and verify it in the release APK's manifest (`aapt2 dump xmltree --file AndroidManifest.xml app-release.apk | grep -i taskAffinity`). This entry covers only StrandHogg 2.0.
+First separate the two issues. The original StrandHogg (2019) abuses `taskAffinity` and task reparenting and is not tied to an OS version; minSdk does **not** answer it. If the finding is about `taskAffinity`/task reparenting, it is real unless exported activities set `android:taskAffinity=""`: add that and verify it in the release APK's manifest (`aapt2 dump xmltree --file AndroidManifest.xml app-release.apk | grep -B8 -i taskAffinity` shows the owning `E: activity` element and its `android:name`; cross-check against the `exported` list from `python3 scripts/inspect_apk.py app-release.apk`). This entry covers only StrandHogg 2.0.
 
 **Why it's a false positive:** CVE-2020-0096 is an Android OS flaw affecting Android 9 and earlier; the May 2020 Android Security Bulletin lists fixes for 8.0, 8.1 and 9. With minSdk 29 (Android 10) the app cannot be installed on an affected version. `taskAffinity=""` and `singleTop` are defence in depth, not the primary mitigation.
 

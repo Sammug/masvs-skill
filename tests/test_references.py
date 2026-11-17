@@ -77,7 +77,7 @@ def test_false_positive_entries_are_complete():
 
 def test_false_positives_cover_known_patterns():
     text = (REFS / "false-positives.md").read_text().lower()
-    for needle in ["path_provider", "app.framework", "aes/cbc/pkcs5padding", "strandhogg", "swift"]:
+    for needle in ["path_provider", "app.framework", "aes/cbc with pkcs5/pkcs7 padding", "strandhogg", "swift"]:
         assert needle in text
 
 

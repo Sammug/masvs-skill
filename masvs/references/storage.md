@@ -40,7 +40,7 @@ Smallest change, no user-visible effect. Prefer config over code.
 
 | Issue | Flutter | Android | iOS | React Native |
 |---|---|---|---|---|
-| Legacy secure-storage cipher | Pass `AndroidOptions(encryptedSharedPreferences: true)` to every instance The plugin migrates existing values automatically, so users should stay logged in; test the upgrade path from the store build on real devices. Jetpack security-crypto (EncryptedSharedPreferences) is deprecated and flutter_secure_storage ≥ 10 moves away from it, so upgrading to ≥ 10 (following its migration notes) is the forward path; the option is the smallest fix on < 10. | — | — | — |
+| Legacy secure-storage cipher | Pass `AndroidOptions(encryptedSharedPreferences: true)` to every instance. The plugin migrates existing values automatically, so users should stay logged in; test the upgrade path from the store build on real devices. Jetpack security-crypto (EncryptedSharedPreferences) is deprecated and flutter_secure_storage ≥ 10 moves away from it, so upgrading to ≥ 10 (following its migration notes) is the forward path; the option is the smallest fix on < 10. | — | — | — |
 | Secrets in prefs | Move to flutter_secure_storage; read old key once, write to secure storage, delete old key (silent migration). | EncryptedSharedPreferences or Keystore-wrapped values; same silent migration. | Keychain with `ThisDeviceOnly`; migrate from UserDefaults on launch. | react-native-keychain (or an equivalent Keystore/Keychain wrapper); migrate silently. |
 | Backup | Edit `android/app/src/main/AndroidManifest.xml` as in Android column. | `android:allowBackup="false"`, plus `android:fullBackupContent="@xml/backup_rules"` (≤ Android 11) and `android:dataExtractionRules="@xml/data_extraction_rules"` (12+). | Mark sensitive files `isExcludedFromBackup`; Keychain `ThisDeviceOnly` items are not restored to other devices. | As Android/iOS. |
 | Logging | Remove, or guard with `kReleaseMode`/`assert`. | Strip `Log.d/v/i` with R8 `-assumenosideeffects`; never log secrets at `w/e`. | `os_log` with `privacy: .private`, or remove. | Guard with `__DEV__` or a console-stripping Babel transform. |
@@ -82,6 +82,6 @@ Backup rule files exclude every domain:
 
 See `false-positives.md`:
 - `getExternalStorageDirectory` inside path_provider_android (plugin code the app never calls).
-- "AES/CBC/PKCS5Padding" in flutter_secure_storage after every instance uses encryptedSharedPreferences.
+- "AES/CBC with PKCS5/PKCS7 padding" in flutter_secure_storage after every instance uses encryptedSharedPreferences.
 
 Also commonly over-reported: a public, restricted client API key flagged by a SECRET-* rule (show the key restrictions in the provider console); `allowBackup` "unset" in a library manifest that the app manifest overrides (check the merged manifest, not the library).

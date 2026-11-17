@@ -54,6 +54,6 @@ Do not swap a working platform keystore for hand-rolled crypto to satisfy a scan
 ## Common false positives
 
 See `false-positives.md`:
-- "AES/CBC/PKCS5Padding" in flutter_secure_storage: the plugin keeps its legacy class to migrate old data. Residual once every instance is configured.
+- "AES/CBC with PKCS5/PKCS7 padding" in flutter_secure_storage: the plugin keeps its legacy class to migrate old data. Residual once every instance is configured.
 
 Also common: MD5/SHA-1 used for non-security checksums or cache keys; CBC findings inside a well-maintained TLS or database library the app does not call directly (attribute with `owner`, then decide).
