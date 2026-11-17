@@ -16,19 +16,25 @@ OBJC_SWIFT = re.compile(r"_objc_release|_objc_retain|_swift_|_\$s")
 
 def parse_otool_imports(text: str, name: str = "") -> dict:
     symbols = set(re.findall(r"\s(_\S+)\s*$", text, re.M))
-    canary = any(s in symbols for s in CANARY)
+    canary: bool | None = any(s in symbols for s in CANARY)
     has_objc = any(s.startswith("_objc_") for s in symbols)
     has_swift = any(s.startswith(("_swift_", "__swift_", "_$s")) for s in symbols)
+    has_rr = "_objc_release" in symbols or "_objc_retain" in symbols
     notes = []
     arc = None
     if Path(name).name == "App" and not has_objc:
         kind = "dart-aot"
-        notes.append("n/a: compiled Dart (AOT), no Objective-C")
+        canary = canary or None
+        notes.append("n/a: compiled Dart (AOT), no Objective-C/C stack frames")
     elif has_objc or has_swift or OBJC_SWIFT.search(text):
         kind = "objc-swift"
-        arc = "_objc_release" in symbols or "_objc_autoreleaseReturnValue" in symbols
-        if has_swift and not canary:
+        if has_swift and not has_rr:
+            arc = None
+            canary = canary or None
             notes.append("pure Swift: canary not emitted by compiler")
+            notes.append("ARC is Swift's default (no Objective-C retain/release imports)")
+        else:
+            arc = "_objc_release" in symbols or "_objc_autoreleaseReturnValue" in symbols
     else:
         kind = "c"
     return {"stack_canary": canary, "arc": arc, "kind": kind, "note": "; ".join(notes) or None}

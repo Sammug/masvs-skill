@@ -79,15 +79,24 @@ def test_otool_canary_present():
 
 def test_otool_canary_absent_pure_swift():
     r = inspect_ipa.parse_otool_imports("0x1 1 _swift_allocObject\n0x2 2 _swift_release\n", "Lib")
-    assert r["stack_canary"] is False
+    assert r["stack_canary"] is None
+    assert r["arc"] is None
     assert r["kind"] == "objc-swift"
     assert "pure Swift" in r["note"]
+    assert "ARC" in r["note"]
+
+
+def test_objc_without_canary_is_false():
+    r = inspect_ipa.parse_otool_imports("0x1 1 _objc_release\n0x2 2 _swift_allocObject\n", "Lib")
+    assert r["stack_canary"] is False
+    assert r["arc"] is True
 
 
 def test_app_framework_dart_aot():
     r = inspect_ipa.parse_otool_imports(fx("otool_Iv_appframework.txt"), "App")
     assert r["kind"] == "dart-aot"
     assert r["arc"] is None
+    assert r["stack_canary"] is None
     assert "n/a" in r["note"]
 
 
@@ -130,3 +139,41 @@ def test_bad_path_exits_2(tmp_path):
         r = run_cli(script, tmp_path / "nope", env)
         assert r.returncode == 2
         assert "error" in json.loads(r.stdout)
+
+
+def fake_aapt2(tmp_path, body):
+    d = tmp_path / "bin"
+    d.mkdir()
+    tool = d / "aapt2"
+    tool.write_text("#!/bin/sh\n" + body + "\n")
+    tool.chmod(0o755)
+    return {"PATH": str(d), "HOME": str(tmp_path)}
+
+
+def test_tool_failure_is_error_not_clean(tmp_path):
+    f = tmp_path / "x.apk"
+    f.write_bytes(b"PK")
+    for body in ("echo 'boom' >&2; exit 1", "echo garbage", "exit 0"):
+        d = tmp_path / ("t%d" % abs(hash(body)))
+        d.mkdir()
+        r = run_cli("inspect_apk.py", f, fake_aapt2(d, body))
+        assert r.returncode == 2, body
+        out = json.loads(r.stdout)
+        assert "aapt2 failed" in out["error"]
+
+
+def test_target_sdk_from_badging_drives_implicit_export():
+    text = fx("aapt_xmltree.txt").replace("        A: http://schemas.android.com/apk/res/android:targetSdkVersion(0x01010270)=36\n", "")
+    old = inspect_apk.parse_xmltree(text, 30)
+    assert "com.example.app.BootReceiver" in {e["name"] for e in old["exported"]}
+    assert old["target_sdk"] == 30
+    new = inspect_apk.parse_xmltree(text, 36)
+    assert "com.example.app.BootReceiver" not in {e["name"] for e in new["exported"]}
+
+
+def test_unknown_target_sdk_marks_export_unknown():
+    text = fx("aapt_xmltree.txt").replace("        A: http://schemas.android.com/apk/res/android:targetSdkVersion(0x01010270)=36\n", "")
+    m = inspect_apk.parse_xmltree(text)
+    entry = next(e for e in m["exported"] if e["name"] == "com.example.app.BootReceiver")
+    assert entry["exported"] == "unknown"
+    assert entry["permission"] is None
