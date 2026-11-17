@@ -393,3 +393,58 @@ def test_unreadable_file_skipped(tmp_path):
     finally:
         f.chmod(0o644)
     assert res["matches"] == []
+
+
+PEM_JSON = (
+    '{"type": "service_account", "private_key": "-----BEGIN PRIVATE KEY-----\\n'
+    "MIIEvQIBADANBgkqhkiG9w0BAQEFAASCBKcwggSjAgEAAoIBAQC7VJTUt9Us8cKj\\n"
+    'ZmFrZWZha2VmYWtlZmFrZWZha2U=\\n-----END PRIVATE KEY-----\\n", "client_email": "x@example.invalid"}\n'
+)
+
+
+def test_redact_one_line_pem_consumes_body():
+    out = _common.redact(PEM_JSON)
+    assert "MIIEvQ" not in out and "BEGIN" not in out and "END PRIVATE" not in out
+    assert out.startswith('{"type": "service_account", "private_key": "----…')
+    assert out.endswith('", "client_email": "x@example.invalid"}\n')
+
+
+def test_one_line_pem_key_body_not_in_scanner_output(tmp_path):
+    (tmp_path / "sa.json").write_text(PEM_JSON)
+    p = cli(tmp_path, "--stacks", "android")
+    assert p.returncode == 0
+    res = json.loads(p.stdout)
+    (m,) = rules_hit(res, "SECRET-PEM-1")
+    assert "----…" in m["snippet"]
+    assert "MIIEvQ" not in p.stdout
+    assert not re.search(r"[A-Za-z0-9+/]{20,}", p.stdout)
+
+
+def test_redact_literals_direct():
+    assert _common.redact_literals("p.setString('auth_token', 'sk_live_51HxyzFAKEFAKE00')") == \
+        "p.setString('auth_token', 'sk_l…')"
+    assert _common.redact_literals('k = "Zm9vYmFyYmF6cXV4MTIz"') == 'k = "Zm9v…"'
+    for untouched in (
+        "'auth_token'", "'loading'", '"short1"', "'abcdefghijklmnopqrstuvwxyz'",
+        "'network_security_config_value'", "'1234567890123456789'", "'has space 1234567890123456'",
+        "'https://example.invalid/path1'",
+    ):
+        assert _common.redact_literals(untouched) == untouched
+
+
+def test_literal_secret_in_smell_snippet_redacted(tmp_path):
+    f = tmp_path / "lib" / "a.dart"
+    f.parent.mkdir()
+    f.write_text("void f(SharedPreferences p) { p.setString('auth_token', 'sk_live_51HxyzFAKEFAKE00'); }\n")
+    p = cli(tmp_path, "--stacks", "flutter")
+    assert "sk_live_51HxyzFAKEFAKE00" not in p.stdout
+    (m,) = rules_hit(json.loads(p.stdout), "FLT-STORAGE-1")
+    assert "'auth_token'" in m["snippet"] and "'sk_l…'" in m["snippet"]
+
+
+def test_plain_literals_untouched_in_snippets(tmp_path):
+    f = tmp_path / "lib" / "a.dart"
+    f.parent.mkdir()
+    f.write_text("void f(SharedPreferences p) { p.setString('auth_token', 'loading'); }\n")
+    (m,) = rules_hit(run(tmp_path, "--stacks", "flutter"), "FLT-STORAGE-1")
+    assert m["snippet"].endswith("p.setString('auth_token', 'loading'); }")

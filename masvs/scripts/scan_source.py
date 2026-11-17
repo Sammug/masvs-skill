@@ -8,7 +8,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
-from _common import SECRET_PATTERNS, redact, walk  # noqa: E402
+from _common import SECRET_PATTERNS, redact, redact_literals, walk  # noqa: E402
 from detect_stack import detect  # noqa: E402
 
 RULES_PATH = Path(__file__).resolve().parent.parent / "data" / "rules.json"
@@ -118,13 +118,17 @@ def owner_of(rel: str) -> str:
     return "app"
 
 
+def scrub(text: str) -> str:
+    return redact_literals(redact(text))
+
+
 def make_snippet(line: str, col: int) -> str:
     lead = len(line) - len(line.lstrip())
     body = line.strip()
-    out = redact(body)
+    out = scrub(body)
     if len(out) > SNIPPET_MAX:
-        start = max(0, len(redact(body[:max(col - lead, 0)])) - 80)
-        out = redact(out[start:start + SNIPPET_MAX])
+        start = max(0, len(scrub(body[:max(col - lead, 0)])) - 80)
+        out = scrub(out[start:start + SNIPPET_MAX])
     return out[:SNIPPET_MAX]
 
 

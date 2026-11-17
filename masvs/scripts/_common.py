@@ -23,7 +23,10 @@ SECRET_PATTERNS: dict[str, str] = {
     "github_token": r"\b(?:gh[po]_[0-9A-Za-z]{36}|github_pat_[0-9A-Za-z_]{22,})",
     "google_api_key": r"\bAIza[0-9A-Za-z_\-]{35}",
     "slack_token": r"\bxox[bp]-[0-9A-Za-z\-]{10,}",
-    "private_key": r"-----BEGIN (?:[A-Z]+ )*PRIVATE KEY(?: BLOCK)?-----",
+    "private_key": (
+        r"-----BEGIN (?:[A-Z]+ )*PRIVATE KEY(?: BLOCK)?-----"
+        r'(?:[^\n"]*?-----END[^-\n]*-----)?[^\n"]*'
+    ),
     "jwt": r"\beyJ[0-9A-Za-z_\-]{8,}\.[0-9A-Za-z_\-]{8,}\.[0-9A-Za-z_\-]{8,}",
 }
 _SECRET_RE = re.compile("|".join(f"(?:{p})" for p in SECRET_PATTERNS.values()))
@@ -31,3 +34,13 @@ _SECRET_RE = re.compile("|".join(f"(?:{p})" for p in SECRET_PATTERNS.values()))
 
 def redact(text: str) -> str:
     return _SECRET_RE.sub(lambda m: m.group(0)[:4] + "\u2026", text)
+
+
+_LITERAL_RE = re.compile(
+    r"""(?P<q>['"])(?=[A-Za-z0-9_\-+/=.]{16,}(?P=q))(?=[^'"]*\d)(?=[^'"]*[A-Za-z])"""
+    r"""(?P<v>[A-Za-z0-9_\-+/=.]{16,})(?P=q)"""
+)
+
+
+def redact_literals(text: str) -> str:
+    return _LITERAL_RE.sub(lambda m: m.group("q") + m.group("v")[:4] + "\u2026" + m.group("q"), text)
