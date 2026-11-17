@@ -22,9 +22,8 @@ COLUMNS = [
 ]
 WIDTHS = [28, 18, 45, 35, 11, 45, 18, 40, 45, 14, 12, 18, 18]
 FOOTNOTE = (
-    "Evidence tags: [verified] = confirmed by running a check or reproducing the issue; "
-    "[inferred] = deduced from code or config, not executed; "
-    "[manual] = needs a human check or was supplied by a person."
+    "Evidence tags: [verified] a script or command showed it; "
+    "[inferred] reasoned from code or config; [manual] needs manual test"
 )
 SEV_COLOURS = {"Critical": "C00000", "High": "FF0000", "Medium": "FFC000", "Low": "0070C0", "Info": "7F7F7F"}
 STATUS_FILLS = {
@@ -76,6 +75,16 @@ def validate(data) -> list[str]:
     for i, f in enumerate(data["findings"]):
         if f["control"] not in controls:
             errors.append(f"$.findings[{i}].control: unknown control {f['control']!r}")
+    for i, f in enumerate(data["findings"]):
+        label = f"$.findings[{i}] ({f['title']})"
+        evidence = str(f.get("evidence") or "").strip()
+        kind = f.get("evidence_kind")
+        if evidence and not kind:
+            errors.append(f"{label}: evidence requires evidence_kind")
+        if f["status"] in ("Fixed", "Already mitigated") and not (evidence and kind == "verified"):
+            errors.append(f"{label}: status {f['status']} requires non-empty evidence with evidence_kind 'verified'")
+        if f["status"] == "False positive" and not evidence:
+            errors.append(f"{label}: status False positive requires non-empty evidence")
     return errors
 
 
@@ -99,6 +108,13 @@ def rows(findings: list[dict]) -> list[list[str]]:
     return [[cell(f, key) for _, key in COLUMNS] for f in findings]
 
 
+_FORMULA_RE = re.compile(r"^[=+\-@\t\r]")
+
+
+def neutralise(text: str) -> str:
+    return "'" + text if _FORMULA_RE.match(text) else text
+
+
 def md_cell(text: str) -> str:
     return re.sub(r"\s*\n\s*", " ", text.replace("\r", "")).replace("|", "\\|")
 
@@ -108,9 +124,9 @@ def render_markdown(data: dict, table: list[list[str]]) -> str:
     for f in data["findings"]:
         counts[f["severity"]][f["status"]] += 1
     out = [
-        f"# MASVS findings — {clean(data['project'])}",
+        f"# MASVS findings — {md_cell(clean(data['project']))}",
         "",
-        f"Generated: {data.get('generated') or date.today().isoformat()}",
+        f"Generated: {md_cell(clean(data.get('generated') or date.today().isoformat()))}",
         "",
         "## Assets",
         "",
@@ -139,7 +155,7 @@ def write_csv(path: Path, table: list[list[str]]) -> None:
     with path.open("w", newline="", encoding="utf-8-sig") as fh:
         w = csv.writer(fh)
         w.writerow([n for n, _ in COLUMNS])
-        w.writerows(table)
+        w.writerows([neutralise(c) for c in r] for r in table)
 
 
 def write_xlsx(openpyxl, path: Path, table: list[list[str]]) -> None:
@@ -155,13 +171,15 @@ def write_xlsx(openpyxl, path: Path, table: list[list[str]]) -> None:
     align = Alignment(wrap_text=True, vertical="top")
     ws.append([n for n, _ in COLUMNS])
     for r in table:
-        ws.append(r)
+        ws.append([neutralise(c) for c in r])
     sev_i = [k for _, k in COLUMNS].index("severity")
     st_i = [k for _, k in COLUMNS].index("status")
     for row in ws.iter_rows(min_row=1, max_row=ws.max_row):
         for c in row:
             c.font = Font(name="Aptos", size=11, bold=True) if c.row == 1 else base
             c.alignment = align
+            if c.row > 1 and isinstance(c.value, str):
+                c.data_type = "s"
             c.border = border
         if row[0].row == 1:
             continue

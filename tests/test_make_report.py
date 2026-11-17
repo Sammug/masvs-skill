@@ -145,3 +145,67 @@ def test_secret_never_rendered(tmp_path, monkeypatch):
         ws = openpyxl.load_workbook(tmp_path / "x" / "report.xlsx").active
         assert TOKEN not in str(ws["I2"].value)
         assert "ghp_…" in ws["I2"].value
+
+
+def test_heading_and_generated_redacted_and_escaped(tmp_path):
+    d = doc(finding())
+    d["project"] = f"Ex\nApp {TOKEN}"
+    d["generated"] = f"2026\n{TOKEN}"
+    p = write(tmp_path, d)
+    make_report.main([str(p), "--out", str(tmp_path)])
+    md = (tmp_path / "report.md").read_text(encoding="utf-8")
+    assert TOKEN not in md
+    assert "# MASVS findings — Ex App ghp_…" in md
+    assert "Generated: 2026 ghp_…" in md
+
+
+FORMULA = '=HYPERLINK("http://example.invalid","x")'
+
+
+@pytest.mark.skipif(openpyxl is None, reason="openpyxl missing")
+def test_xlsx_formula_neutralised(tmp_path):
+    p = write(tmp_path, doc(finding(observation=FORMULA)))
+    make_report.main([str(p), "--out", str(tmp_path)])
+    c = openpyxl.load_workbook(tmp_path / "report.xlsx").active["C2"]
+    assert c.data_type == "s"
+    assert c.value == "'" + FORMULA
+
+
+def test_csv_formula_neutralised(tmp_path, monkeypatch):
+    real = builtins.__import__
+
+    def blocked(name, *a, **k):
+        if name.split(".")[0] == "openpyxl":
+            raise ImportError(name)
+        return real(name, *a, **k)
+
+    p = write(tmp_path, doc(finding(observation=FORMULA)))
+    monkeypatch.setattr(builtins, "__import__", blocked)
+    make_report.main([str(p), "--out", str(tmp_path / "o")])
+    monkeypatch.undo()
+    rows = list(csv.reader((tmp_path / "o" / "report.csv").open(encoding="utf-8-sig")))
+    assert rows[1][2] == "'" + FORMULA
+
+
+def test_evidence_requires_kind():
+    f = finding(status="Open")
+    del f["evidence_kind"]
+    errs = make_report.validate(doc(f))
+    assert any("requires evidence_kind" in e and "[0]" in e for e in errs)
+
+
+@pytest.mark.parametrize("status", ["Fixed", "Already mitigated"])
+@pytest.mark.parametrize("kw", [{"evidence": ""}, {"evidence_kind": "inferred"}, {"evidence_kind": "manual"}])
+def test_fixed_requires_verified_evidence(status, kw):
+    errs = make_report.validate(doc(finding(status=status, **kw)))
+    assert any("verified" in e and "Cleartext traffic allowed" in e and "[0]" in e for e in errs)
+
+
+def test_false_positive_requires_evidence():
+    assert make_report.validate(doc(finding(status="False positive", evidence="", evidence_kind="inferred")))
+    assert make_report.validate(doc(finding(status="False positive", evidence="x", evidence_kind="inferred"))) == []
+
+
+def test_footnote_wording():
+    assert "[verified] a script or command showed it" in make_report.FOOTNOTE
+    assert "[manual] needs manual test" in make_report.FOOTNOTE
