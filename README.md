@@ -7,8 +7,8 @@ A Claude Code plugin for OWASP MASVS mobile security audits, pentest/VAPT prep a
 | Mode | Use it to | Example prompt |
 |---|---|---|
 | `audit` | Scan the source and any APK/IPA, then write `findings.json`, a Markdown report and an optional .xlsx | "Audit this app for MASVS before the pentest" |
-| `remediate` | Take an auditor's findings, map each to a MASVS control, classify it (fix, already mitigated, false positive), apply fixes and fill in the response columns | "Here is the VAPT sheet, respond to each finding and fix what's real" |
-| `checklist` | Get a short per-feature checklist, one item per MASWE weakness, while coding | "I'm adding biometric login, what MASVS checks apply?" |
+| `remediate` | Take an auditor's findings, map each to a MASVS control and MASWE weakness, classify it (fix, already mitigated, false positive), apply fixes and fill in the response columns | "Here is the VAPT sheet, respond to each finding and fix what's real" |
+| `checklist` | Get a short per-feature checklist, one item per MASWE weakness, while coding | "I'm adding biometric login on Flutter, what MASVS/MASWE checks apply?" |
 
 ## Install
 
@@ -42,7 +42,58 @@ Restart Claude Code (or start a new session) after installing.
 
 ## Use
 
-Ask in plain words, for example "run a MASVS audit of this app", or invoke it directly with `/masvs:masvs audit`. Reports go to `<app>/.masvs/` (add it to `.gitignore`).
+Open your app's repo in Claude Code and ask in plain words. Claude picks the skill up on its own when you mention MASVS, MASWE, a pentest, VAPT or a security audit. To call it directly, type `/masvs:masvs` followed by your request (plain `/masvs` won't find it, because plugin skills are namespaced).
+
+Reports go to `<app>/.masvs/`. Add that folder to `.gitignore`, because it holds security findings.
+
+### Prompts that work well
+
+Good prompts say three things: **the mode** (audit, remediate or checklist), **what to look at** (the repo, a built APK/IPA, the auditor's sheet) and **what you want back** (a report, fixes, responses).
+
+**Audit before a pentest**
+
+```
+Run a MASVS audit of this app. The release APK is at build/app/outputs/flutter-apk/app-release.apk
+and the IPA is at build/ios/ipa/MyApp.ipa. Write the report and an xlsx.
+```
+
+```
+/masvs:masvs audit — Android only, no build yet. Tell me what can't be checked without an APK.
+```
+
+**Respond to an auditor's findings**
+
+```
+Here is the VAPT report: docs/security/vapt-round1.xlsx. For each finding, map it to a MASVS control
+and MASWE weakness, decide fix / already mitigated / false positive with evidence, fix what is real,
+and fill in the response columns.
+```
+
+```
+The pentester says "Weak Cryptographic Implementation: AES-CBC with PKCS7 padding". Which MASWE
+weakness is this, is it real in our code or in a plugin, and what should we reply?
+```
+
+**Checklist while building a feature**
+
+```
+I'm adding biometric login on Flutter. Give me the MASVS/MASWE checklist for Android and iOS,
+with the fix pattern and the test to show an auditor.
+```
+
+**Questions**
+
+```
+Explain MASWE-0006 for a React Native app and show me how to check it in our build.
+Which MASWE weaknesses fall under MASVS-NETWORK-1, and which ones do we fail?
+```
+
+**Tips**
+
+- **Give it the built app when you can.** Without an APK or IPA, build-only checks come back as `Not run`, and nothing can be marked `Fixed` or `Already mitigated`.
+- **Don't ask for a clean sheet.** The skill won't mark something fixed without verified evidence, even when asked. That protects you when the pentester retests.
+- **Name the flavor or environment** (dev, UAT, prod) if your app has several. Settings often differ between them.
+- **Say when a fix changes UX or the backend** (forced re-login, pin rotation). The skill proposes these and waits for your sign-off instead of applying them.
 
 ## Requirements
 

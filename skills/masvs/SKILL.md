@@ -1,8 +1,8 @@
 ---
 name: masvs
-description: Use for mobile app security work on Flutter, native Android (Kotlin/Java), native iOS (Swift/ObjC) or React Native apps measured against OWASP MASVS. Triggers include pentest or VAPT prep, a mobile security review or audit, questions about MASVS, MASTG or MASWE, an auditor's findings sheet or security tickets to respond to, a request to mark a finding fixed or false positive, a pre-release security checklist for a feature (storage, crypto, auth, network, WebView, IPC, logging, root/jailbreak detection), APK/IPA inspection, certificate pinning, and secrets found in a mobile repo.
+description: Use for mobile app security work on Flutter, native Android (Kotlin/Java), native iOS (Swift/ObjC) or React Native apps measured against OWASP MASVS. Triggers include pentest or VAPT prep, a mobile security review or audit, questions about MASVS controls, MASWE weaknesses or MASTG tests, mapping a finding to a control or weakness, an auditor's findings sheet or security tickets to respond to, a request to mark a finding fixed or false positive, a pre-release security checklist for a feature (storage, crypto, auth, network, WebView, IPC, logging, root/jailbreak detection), APK/IPA inspection, certificate pinning, and secrets found in a mobile repo.
 metadata:
-  version: 0.3.0
+  version: 0.3.1
 ---
 
 # MASVS audit and remediation

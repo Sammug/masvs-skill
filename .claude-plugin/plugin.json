@@ -1,10 +1,10 @@
 {
   "name": "masvs",
-  "version": "0.3.0",
-  "description": "OWASP MASVS mobile security audits and pentest remediation for Flutter, Android, iOS and React Native apps: scans source and built APK/IPA, maps findings to MASVS controls, and writes an evidence-backed report.",
+  "version": "0.3.1",
+  "description": "OWASP MASVS and MASWE mobile security audits and pentest remediation for Flutter, Android, iOS and React Native apps: scans source and built APK/IPA, maps each finding to a MASVS control and MASWE weakness, and writes an evidence-backed report.",
   "author": { "name": "Sammug" },
   "homepage": "https://github.com/Sammug/masvs-skill",
   "repository": "https://github.com/Sammug/masvs-skill",
   "license": "Apache-2.0",
-  "keywords": ["security", "owasp", "masvs", "mobile", "pentest", "flutter", "android", "ios", "react-native"]
+  "keywords": ["security", "owasp", "masvs", "maswe", "mastg", "mobile", "pentest", "flutter", "android", "ios", "react-native"]
 }
