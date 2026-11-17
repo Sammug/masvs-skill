@@ -18,18 +18,25 @@ def _top_level(fm, key):
     return m.group(1).strip().strip("\"'") if m else None
 
 
+def _top_level_meta_version(fm):
+    m = re.search(r"^metadata:\s*\n\s+version:\s*(\S+)\s*$", fm, re.M)
+    assert m, "metadata.version missing"
+    return m.group(1).strip("\"'")
+
+
 def test_skill_frontmatter():
     fm = _frontmatter(SKILL.read_text())
     assert _top_level(fm, "name") == "masvs"
     desc = _top_level(fm, "description")
     assert desc and 1 <= len(desc) <= 1024
     assert "MASVS" in desc
-    assert re.search(r"^metadata:\s*\n\s+version:\s*0\.1\.0\s*$", fm, re.M)
+    assert re.match(r"\d+\.\d+\.\d+$", _top_level_meta_version(fm))
 
 
 def test_package_zip(tmp_path):
     subprocess.run(["bash", str(ROOT / "scripts" / "package.sh")], check=True, cwd=tmp_path)
-    zp = ROOT / "dist" / "masvs-0.1.0.zip"
+    version = _top_level_meta_version(_frontmatter(SKILL.read_text()))
+    zp = ROOT / "dist" / f"masvs-{version}.zip"
     assert zp.exists()
     names = zipfile.ZipFile(zp).namelist()
     assert "masvs/SKILL.md" in names
