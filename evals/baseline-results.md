@@ -118,3 +118,26 @@ Every bullet passed in each scenario. Notes per scenario:
 | `check_pins` on config only | `--nsc` alone is inferred. `--host` is verified. |
 | No script for reproducing server-side or auth findings | Read the code path (inferred) and list the playbook's manual test. |
 | `project` field set to the folder name | Use the app name. |
+
+# With skill, run 2 (1/4/6) (commit 065e7fc)
+
+| Scenario | Bullets | Baseline P / ½ / F | Run 1 P / ½ / F | Run 2 P / ½ / F |
+|---|---|---|---|---|
+| 1. Plugin false positive | 5 | 2 / 2 / 1 | 5 / 0 / 0 | 5 / 0 / 0 |
+| 4. Flutter + native monorepo | 4 | 3 / 1 / 0 | 4 / 0 / 0 | 4 / 0 / 0 |
+| 6. No artifacts, pre-pentest | 6 | 3 / 1 / 2 | 6 / 0 / 0 | 6 / 0 / 0 |
+
+Each change from the tightening commit took effect:
+- F-01 is now `False positive` with `evidence_kind: inferred`. Attribution came from `pubspec.lock`, since `~/.pub-cache` wasn't available, and the `inspect_apk.py` command to confirm it is named.
+- F-02 had the fix applied and stays Open, and `findings.json` was created from the auditor's rows.
+- Scenarios 4 and 6 have one Not run row per untested control (22 each), with every row as inferred or manual.
+- Scenario 6 uses MASWE-0028 for the expired pin-set and leaves the other MASWE fields empty, not guessed.
+- Scenario 6 also asked before adding `flutter_secure_storage`, under the no-new-dependencies rule, and before the pin update, which needs a backend or certificate change.
+
+The agent reported two remaining ambiguities, both fixed in SKILL.md:
+- How a requested pass/fail column maps to the statuses. Now: Fail = Open, Not tested = Not run, and never Pass.
+- Whether "one row per control" also limits findings. Now: one Not run row per untested control, several findings may share a control, and a Not run row's `asset` names the missing build.
+
+Other notes from the agent needed no change:
+- An applied fix staying Open until rebuilt is already covered by remediate step 5.
+- There are no `sed -i` snippets in the skill.
