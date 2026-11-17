@@ -15,6 +15,7 @@ Start with `scripts/scan_source.py <app>` and, when you have a build, `scripts/i
   - FLT-STORAGE-1: tokens or credentials in `shared_preferences` (a plaintext XML/plist).
   - FLT-STORAGE-2: `FlutterSecureStorage(...)` without `AndroidOptions(encryptedSharedPreferences: true)` on flutter_secure_storage < 10. Every instance counts, including ones built in DI modules, test helpers that ship, and plugins you wrap. One forgotten instance keeps the legacy cipher for its keys.
   - FLT-LOG-1: `print`/`debugPrint` of secrets. Both reach the device log in release builds.
+  - FLT-LOG-2: Dio `LogInterceptor` with `requestBody`/`responseBody` true and no `kDebugMode`/`kReleaseMode` guard in the file. Bodies reach the device log in release builds; check how the interceptor is added and whether a redacting wrapper is used.
   - Image/HTTP caches holding sensitive responses (e.g. statements, ID scans) in shared or backed-up locations.
 - **Android**
   - AND-BACKUP-1, AND-BACKUP-2: backup enabled or unset. A `${placeholder}` is reported as unresolved; confirm in the merged manifest or APK (`inspect_apk.py` → `allow_backup`).

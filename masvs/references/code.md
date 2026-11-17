@@ -14,6 +14,7 @@ MASTG candidates: `mastg_tests` in `data/controls.json` (CODE-3 and CODE-4 share
 - **Flutter**
   - Dependency tree, not just `pubspec.yaml`: `flutter pub deps` and `pubspec.lock`. Findings often come from transitive packages (e.g. an image-cache package pulling in a SQLite plugin).
   - SCA on the lockfiles: `osv-scanner` (reads `pubspec.lock`, `Podfile.lock`, Gradle lockfiles, `package-lock.json`) or the platform's audit tool. `flutter pub outdated` for stale majors.
+  - FLT-DEP-1 / RN-DEP-1: a SQLite plugin in `pubspec.lock` / `package.json`. Grep `lib/` (or `src/`) for its import first; with no direct use, trace the parent with `flutter pub deps` / `npm ls` and treat the finding as the dependency's.
   - Raw SQL built by string interpolation (`rawQuery("... $x")`) in app code.
   - Release builds: `--obfuscate --split-debug-info` (see `resilience.md`), `debuggable` false.
 - **Android**

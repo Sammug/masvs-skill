@@ -1,1 +1,1 @@
-{"name": "demo", "dependencies": {"react-native": "0.74.0"}}
+{"name": "demo", "dependencies": {"react-native": "0.74.0", "react-native-sqlite-storage": "6.0.1"}}

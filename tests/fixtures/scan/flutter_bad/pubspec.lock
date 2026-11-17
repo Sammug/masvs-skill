@@ -13,3 +13,10 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "1.2.0"
+  sqflite:
+    dependency: transitive
+    description:
+      name: sqflite
+      url: "https://pub.dev"
+    source: hosted
+    version: "2.3.3"

@@ -23,3 +23,10 @@ void initSentry(SentryFlutterOptions options) {
   options.experimental.replay.onErrorSampleRate = 1.0;
   final cipher = Encrypter(AES(key, mode: AESMode.ecb));
 }
+
+Future<void> boot() async {
+  await SentryFlutter.init((options) {
+    options.dsn = const String.fromEnvironment('DSN');
+  });
+  dio.interceptors.add(LogInterceptor(requestBody: true, responseBody: true));
+}

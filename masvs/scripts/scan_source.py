@@ -2,6 +2,7 @@ import argparse
 import json
 import re
 import stat
+import subprocess
 import sys
 from bisect import bisect_right
 from pathlib import Path
@@ -67,6 +68,7 @@ class Rule:
         self.unless_in_file = _opt(raw, "unless_in_file")
         self.absent = bool(raw.get("absent"))
         self.requires = raw.get("requires")
+        self.exists = bool(raw.get("exists"))
 
     def applies(self, stacks: set, rel: str) -> bool:
         if "*" not in self.stacks and not self.stacks & stacks:
@@ -178,6 +180,17 @@ def check_requires(rule: Rule, path: Path, locks: LockCache):
     return "ok", None
 
 
+def git_ignored(root: Path, rel: str) -> bool:
+    try:
+        p = subprocess.run(
+            ["git", "-C", str(root), "check-ignore", "-q", "--", rel],
+            capture_output=True, timeout=10,
+        )
+    except (OSError, subprocess.SubprocessError):
+        return False
+    return p.returncode == 0
+
+
 def scan(root, stacks=None, include_deps: bool = False) -> dict:
     root = Path(root)
     if stacks is None:
@@ -192,6 +205,19 @@ def scan(root, stacks=None, include_deps: bool = False) -> dict:
         candidates = [r for r in rules if r.applies(stack_set, rel)]
         if not candidates:
             continue
+        for r in candidates:
+            if r.exists and not git_ignored(root, rel):
+                key = (r.id, rel, 1)
+                if key not in seen:
+                    seen.add(key)
+                    matches.append({
+                        "rule": r.id, "control": r.control, "file": rel, "line": 1,
+                        "snippet": f"file present: {path.name}", "owner": owner_of(rel),
+                        "status": "match",
+                    })
+        candidates = [r for r in candidates if not r.exists]
+        if not candidates:
+            continue
         text = read_text(path)
         if text is None:
             continue
@@ -203,7 +229,7 @@ def scan(root, stacks=None, include_deps: bool = False) -> dict:
             end = starts[n] if n < len(starts) else len(text)
             return n, text[starts[n - 1]:end].rstrip("\r\n"), offset - starts[n - 1]
 
-        def emit(rule: Rule, offset: int):
+        def emit(rule: Rule, offset: int, absent_note: bool = False):
             n, line, col = line_at(offset)
             key = (rule.id, rel, n)
             if key in seen:
@@ -212,7 +238,8 @@ def scan(root, stacks=None, include_deps: bool = False) -> dict:
             status = "unresolved" if rule.unresolved and rule.unresolved.search(line) else "match"
             matches.append({
                 "rule": rule.id, "control": rule.control, "file": rel, "line": n,
-                "snippet": make_snippet(line, col), "owner": owner, "status": status,
+                "snippet": "(pattern absent from file)" if absent_note else make_snippet(line, col),
+                "owner": owner, "status": status,
             })
 
         for r in candidates:
@@ -224,7 +251,7 @@ def scan(root, stacks=None, include_deps: bool = False) -> dict:
                 if r.pattern.search(text):
                     continue
                 anchor = r.in_file.search(text) if r.in_file else None
-                emit(r, anchor.start() if anchor else 0)
+                emit(r, anchor.start() if anchor else 0, absent_note=not anchor)
                 continue
             for m in r.pattern.finditer(text):
                 if r.exclude and r.exclude.search(line_at(m.start())[1]):

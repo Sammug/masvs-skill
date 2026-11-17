@@ -26,6 +26,7 @@ MASTG candidates: `mastg_tests` in `data/controls.json` (mapped through shared M
   - JS crypto libraries with hard-coded keys, `Math.random()` for secrets, crypto-js in ECB/CBC without integrity.
 - **All stacks**
   - SECRET-PEM-1: a private key in the repo or bundle. Treat as compromised until shown otherwise (test fixture, revoked, or public demo key).
+  - SECRET-KEYSTORE-1/2, SECRET-KEYPROPS-1, SECRET-SA-1: signing keystores (`*.jks`, `*.keystore`, `*.p12`, base64 keystore files), `key.properties` and cloud service-account key files, flagged by path or `"type"` without reading the key. A release signing key lets anyone ship an app under the publisher's identity; a service-account key works until revoked. Check `git ls-files` and history, rotate or revoke, then move the material to CI secrets or a secret manager.
   - Encryption whose key ships in the binary is obfuscation, not protection. Say so in the response instead of claiming the data is encrypted.
 
 Manual tests: decompile the release build (jadx, or `strings` on the iOS binary) and search for key material and cipher strings; confirm whether each hit is reachable from app code.

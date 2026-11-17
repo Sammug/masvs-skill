@@ -17,6 +17,7 @@ Legal questions (lawful basis, retention periods, regulator-specific duties) go 
   - FLT-TELEMETRY-1: Sentry `sendDefaultPii = true` (IP, user, request data to a third party).
   - FLT-TELEMETRY-2: session replay sample rates above 0 (can capture sensitive screens).
   - FLT-TELEMETRY-3: `attachScreenshot = true` on error events.
+  - FLT-TELEMETRY-4: `Sentry.init` / `SentryFlutter.init` in a file with no `beforeSend`. A scrubber wired from another file is not detected, so confirm before reporting.
   - Breadcrumbs and events carrying HTTP bodies, URLs with query params, phone numbers, emails, amounts, payment references or tokens. Look for `beforeSend` / `beforeBreadcrumb`; if present, check it cannot throw.
   - Crashlytics: `setUserIdentifier`, `setCustomKey`, and logged messages containing PII.
   - Analytics events with user properties set to raw identifiers.
@@ -70,7 +71,7 @@ No UX change: users never see telemetry settings.
 
 ## Evidence to show the auditor
 
-- Source scan with zero FLT-TELEMETRY-1/2/3 matches (`python3 scripts/scan_source.py <app>`), plus the init snippet.
+- Source scan with zero FLT-TELEMETRY-1/2/3/4 matches (`python3 scripts/scan_source.py <app>`), plus the init snippet.
 - Unit tests for the scrubber (input with PII → output without), including a malformed-event case that exercises the catch path.
 - A test crash event from the re-test build as shown in the crash console: no screenshot, no replay, user = opaque id, no PII in breadcrumbs.
 - `python3 scripts/inspect_apk.py app.apk` → `permissions`, each mapped to a feature; iOS privacy manifest file.

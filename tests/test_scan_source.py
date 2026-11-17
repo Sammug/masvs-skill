@@ -210,6 +210,8 @@ def test_rule_schema():
             re.compile(r["unresolved_pattern"])
         if r.get("absent"):
             assert r["kind"] == "config"
+        if r.get("exists"):
+            assert r["kind"] == "config" and r["pattern"] == "" and not r.get("absent")
         if r["kind"] == "secret":
             assert r["pattern"][len("@secret:"):] in _common.SECRET_PATTERNS
     assert len(RULES) == len(seen)
@@ -295,6 +297,7 @@ def test_flutter_bad_fires_every_rule():
     assert set(rules_hit(res)) == {
         "FLT-STORAGE-1", "FLT-STORAGE-2", "FLT-TLS-1", "FLT-LOG-1",
         "FLT-TELEMETRY-1", "FLT-TELEMETRY-2", "FLT-TELEMETRY-3", "FLT-CRYPTO-1",
+        "FLT-DEP-1", "FLT-TELEMETRY-4", "FLT-LOG-2",
     }
     assert lines(res, "FLT-STORAGE-1") == [4, 5, 6]
     assert lines(res, "FLT-LOG-1") == [7, 8, 9]
@@ -324,7 +327,7 @@ def test_flutter_secure_storage_missing_lock_skipped():
 
 def test_rn_bad_fires_every_rule():
     res = run(FIX / "rn_bad", "--stacks", "react-native")
-    assert set(rules_hit(res)) == {"RN-STORAGE-1", "RN-WEBVIEW-1", "RN-LOG-1"}
+    assert set(rules_hit(res)) == {"RN-STORAGE-1", "RN-WEBVIEW-1", "RN-LOG-1", "RN-DEP-1"}
     assert lines(res, "RN-STORAGE-1") == [4, 5]
     assert lines(res, "RN-LOG-1") == [6, 7]
 
@@ -448,3 +451,160 @@ def test_plain_literals_untouched_in_snippets(tmp_path):
     f.write_text("void f(SharedPreferences p) { p.setString('auth_token', 'loading'); }\n")
     (m,) = rules_hit(run(tmp_path, "--stacks", "flutter"), "FLT-STORAGE-1")
     assert m["snippet"].endswith("p.setString('auth_token', 'loading'); }")
+
+
+def write(root, files):
+    for rel, body in files.items():
+        f = root / rel
+        f.parent.mkdir(parents=True, exist_ok=True)
+        f.write_bytes(body if isinstance(body, bytes) else body.encode())
+    return root
+
+
+def test_transitive_sqlite_lock_entries_flagged(tmp_path):
+    lock = "packages:\n" + "".join(
+        f"  {n}:\n    dependency: transitive\n    source: hosted\n    version: \"2.0.0\"\n"
+        for n in ("sqflite", "sqflite_common", "sqflite_darwin", "sqflite_common_ffi", "path")
+    )
+    write(tmp_path, {"pubspec.lock": lock})
+    res = run(tmp_path, "--stacks", "flutter")
+    hits = rules_hit(res, "FLT-DEP-1")
+    assert [m["snippet"] for m in hits] == ["sqflite:", "sqflite_common:", "sqflite_darwin:"]
+    assert {m["control"] for m in hits} == {"MASVS-CODE-3"}
+
+
+def test_transitive_sqlite_absent_not_flagged():
+    res = run(FIX / "flutter_clean", "--stacks", "flutter")
+    assert rules_hit(res, "FLT-DEP-1") == []
+
+
+def test_rn_sqlite_dependency_in_package_json_only():
+    assert lines(run(FIX / "rn_bad", "--stacks", "react-native"), "RN-DEP-1") == [1]
+    assert rules_hit(run(FIX / "rn_clean", "--stacks", "react-native"), "RN-DEP-1") == []
+
+
+def test_stack_protector_only_in_comment_fires(tmp_path):
+    write(tmp_path, {"Podfile": "# OTHER_CFLAGS = '-fstack-protector-all'\n  # -fstack-protector\ntarget 'Runner' do\nend\n"})
+    res = run(tmp_path, "--stacks", "ios")
+    assert lines(res, "IOS-HARDEN-1") == [1]
+    (m,) = rules_hit(res, "IOS-HARDEN-1")
+    assert m["snippet"] == "(pattern absent from file)"
+
+
+def test_stack_protector_in_post_install_clean():
+    res = run(FIX / "ios_clean", "--stacks", "ios")
+    assert rules_hit(res, "IOS-HARDEN-1") == []
+
+
+def test_stack_protector_trailing_comment_only_fires(tmp_path):
+    write(tmp_path, {"Podfile": "config.build_settings['X'] = '1' # add -fstack-protector later\n"})
+    assert lines(run(tmp_path, "--stacks", "ios"), "IOS-HARDEN-1") == [1]
+
+
+def test_sentry_init_without_before_send_flagged():
+    res = run(FIX / "flutter_bad", "--stacks", "flutter")
+    assert lines(res, "FLT-TELEMETRY-4") == [28]
+
+
+def test_sentry_init_with_before_send_not_flagged():
+    res = run(FIX / "flutter_clean", "--stacks", "flutter")
+    assert rules_hit(res, "FLT-TELEMETRY-4") == []
+
+
+def test_sentry_before_send_in_comment_only_still_flagged(tmp_path):
+    write(tmp_path, {"lib/a.dart": "// TODO beforeSend\nvoid f() { Sentry.init((o) {}); }\n"})
+    assert lines(run(tmp_path, "--stacks", "flutter"), "FLT-TELEMETRY-4") == [2]
+
+
+def test_sentry_init_commented_out_not_flagged(tmp_path):
+    write(tmp_path, {"lib/a.dart": "// await SentryFlutter.init((o) {});\n"})
+    assert rules_hit(run(tmp_path, "--stacks", "flutter"), "FLT-TELEMETRY-4") == []
+
+
+def test_log_interceptor_bodies_flagged_unguarded():
+    res = run(FIX / "flutter_bad", "--stacks", "flutter")
+    assert lines(res, "FLT-LOG-2") == [31]
+
+
+def test_log_interceptor_guarded_by_debug_mode_not_flagged():
+    res = run(FIX / "flutter_clean", "--stacks", "flutter")
+    assert rules_hit(res, "FLT-LOG-2") == []
+
+
+def test_log_interceptor_variants(tmp_path):
+    write(tmp_path, {
+        "lib/multi.dart": "final i = LogInterceptor(\n  request: true,\n  responseBody: true,\n);\n",
+        "lib/headers.dart": "final i = LogInterceptor(requestHeader: true, requestBody: false);\n",
+        "lib/default.dart": "final i = LogInterceptor();\n",
+        "lib/release.dart": "final i = kReleaseMode ? null : LogInterceptor(responseBody: true);\n",
+    })
+    hits = rules_hit(run(tmp_path, "--stacks", "flutter"), "FLT-LOG-2")
+    assert [m["file"] for m in hits] == ["lib/multi.dart"]
+
+
+@pytest.mark.parametrize("name", [
+    "upload.jks", "release.keystore", "cert.p12", "cert.pfx", "keystore_base64.txt",
+    "release-keystore.base64", "android/key.properties",
+])
+def test_signing_material_by_name_flagged_without_reading(tmp_path, name):
+    write(tmp_path, {name: b"\x00\x01 sup3rS3cretStorePassw0rd \x00"})
+    res = run(tmp_path, "--stacks", "android")
+    (m,) = [m for m in res["matches"] if m["rule"].startswith(("SECRET-KEYSTORE", "SECRET-KEYPROPS"))]
+    assert m["control"] == "MASVS-CRYPTO-2"
+    assert m["line"] == 1
+    assert m["snippet"] == f"file present: {Path(name).name}"
+    assert "sup3rS3cret" not in json.dumps(res)
+
+
+def test_signing_material_text_content_never_leaks(tmp_path):
+    write(tmp_path, {"android/key.properties": "storePassword=hunter2hunter2\nkeyAlias=upload\n"})
+    out = cli(tmp_path, "--stacks", "android").stdout
+    assert "hunter2" not in out and "SECRET-KEYPROPS-1" in out
+
+
+def test_debug_keystore_and_unrelated_files_not_flagged(tmp_path):
+    write(tmp_path, {
+        "android/app/debug.keystore": b"\x00",
+        "docs/keystore.md": "how to make a keystore",
+        "lib/key_properties.dart": "class K {}",
+    })
+    res = run(tmp_path, "--stacks", "android")
+    assert not [m for m in res["matches"] if m["rule"].startswith("SECRET-KEY")]
+
+
+def test_service_account_json_flagged_without_key_material(tmp_path):
+    body = json.dumps({"type": "service_account", "project_id": "p", "private_key_id": "abcd1234efgh5678",
+                       "private_key": "-----BEGIN PRIVATE KEY-----\\nMIIEvQIBADANBgkqhkiG9w0BAQEFAASC\\n-----END PRIVATE KEY-----\\n"},
+                      indent=2)
+    write(tmp_path, {"deploy/sa.json": body, "deploy/other.json": '{"type": "authorized_user"}'})
+    res = run(tmp_path, "--stacks", "android")
+    (m,) = rules_hit(res, "SECRET-SA-1")
+    assert (m["file"], m["line"], m["control"]) == ("deploy/sa.json", 2, "MASVS-CRYPTO-2")
+    assert "MIIEvQ" not in json.dumps(res)
+
+
+def _git(root, *args):
+    return subprocess.run(["git", "-C", str(root), *args], capture_output=True, text=True)
+
+
+@pytest.mark.skipif(not _git(".", "--version").returncode == 0, reason="git not installed")
+def test_gitignored_signing_material_skipped(tmp_path):
+    write(tmp_path, {".gitignore": "key.properties\n", "key.properties": "x=1\n", "upload.jks": b"\x00"})
+    assert _git(tmp_path, "init", "-q").returncode == 0
+    res = run(tmp_path, "--stacks", "android")
+    assert [m["rule"] for m in res["matches"]] == ["SECRET-KEYSTORE-1"]
+
+
+@pytest.mark.skipif(not _git(".", "--version").returncode == 0, reason="git not installed")
+def test_tracked_file_flagged_even_if_pattern_ignored(tmp_path):
+    write(tmp_path, {"key.properties": "x=1\n"})
+    assert _git(tmp_path, "init", "-q").returncode == 0
+    _git(tmp_path, "add", "key.properties")
+    write(tmp_path, {".gitignore": "key.properties\n"})
+    res = run(tmp_path, "--stacks", "android")
+    assert [m["rule"] for m in res["matches"]] == ["SECRET-KEYPROPS-1"]
+
+
+def test_sentry_init_delegating_to_configurator_not_flagged(tmp_path):
+    write(tmp_path, {"lib/a.dart": "await SentryFlutter.init(\n  (options) => configureSentry(options),\n);\nawait Sentry.init(configureSentry);\n"})
+    assert rules_hit(run(tmp_path, "--stacks", "flutter"), "FLT-TELEMETRY-4") == []

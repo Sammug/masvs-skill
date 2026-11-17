@@ -46,8 +46,9 @@ A protection being present (`Fixed`, `Already mitigated`) never shows Pass on co
 - Medium: needs device access or a specific condition.
 - Low: defence in depth.
 - Info: Not run rows and notes.
+- Leaked credentials and keystores (committed signing keys, service-account keys, API secrets): High by default; Critical once a release signing key or a production cloud credential is confirmed. Rate by exposure, not by whether the file ships in the build. Recommend revoking or rotating, because deleting the file doesn't un-leak it.
 
-**MASWE IDs:** use an ID only if it is in the control's `maswe` list in `data/controls.json` and you have confirmed its title on mas.owasp.org (for example, insecure identity pinning is MASWE-0028 under NETWORK-2). Otherwise leave the field empty.
+**MASWE IDs:** an ID in the control's `maswe` list in `data/controls.json` can be used as is, without a web check. Pick the one whose weakness matches, and leave the field empty if none does. An ID outside that list needs its title confirmed on mas.owasp.org first (for example, insecure identity pinning is MASWE-0028 under NETWORK-2); otherwise leave the field empty.
 
 ## Pick a mode
 
@@ -57,8 +58,8 @@ A protection being present (`Fixed`, `Already mitigated`) never shows Pass on co
 
 ## Audit flow
 
-1. **Detect.** Run `detect_stack.py <root>`. Check every stack it finds, including native extensions, widgets and modules inside a Flutter or React Native repo, even if the user says "just the Dart code". Pentesters test the whole bundle; say so in one line. Name the target in `asset` (e.g. "iOS Share Extension (ios/ShareExtension)") and rate it like the main app.
-2. **Scan.** Run `scan_source.py <root>`. Its output is **matches, not findings**: you assign severity and status after reading the playbook. `status: unresolved` means a placeholder such as `${allowBackup}`. Resolve it from `manifestPlaceholders` (`defaultConfig` plus the release flavor; a flavor without an override inherits the default) and report the value as `inferred`. If it can't be resolved, record it as `Not run`: "unresolved placeholder: check merged manifest/APK".
+1. **Detect.** Run `detect_stack.py <root>`. Check every stack it finds, including native extensions, widgets and modules inside a Flutter or React Native repo, even if the user says "just the Dart code". Pentesters test the whole bundle; say so in one line. Name the target in `asset` (e.g. "iOS Share Extension (ios/ShareExtension)") and rate it like the main app. Platforms in the repo that are out of scope (macOS, web) get one `Not run` row listed as "not assessed", not a finding per scan match; drop their scan matches (e.g. a macOS Podfile) from the findings.
+2. **Scan.** Run `scan_source.py <root>`. Its output is **matches, not findings**: you assign severity and status after reading the playbook. Rules with a filename trigger (SECRET-KEYSTORE-*, SECRET-KEYPROPS-1) match on the path alone, never read the file and skip git-ignored paths; SECRET-SA-1 matches a service-account key file by its `"type"` field. Controls for committed secrets: CRYPTO-2 for signing keys, keystores and service-account private keys (as SECRET-PEM-1), STORAGE-2 for tokens and API keys (SECRET-GOOGLE-1 and similar). Confirm with `git ls-files` and `git log --stat -- <path>` whether the file is tracked or only in history, and whether it is a debug or release key. `status: unresolved` means a placeholder such as `${allowBackup}`. Resolve it from `manifestPlaceholders` (`defaultConfig` plus the release flavor; a flavor without an override inherits the default) and report the value as `inferred`. If it can't be resolved, record it as `Not run`: "unresolved placeholder: check merged manifest/APK".
 3. **Artifacts.** If an APK or IPA is given, run `inspect_apk.py` / `inspect_ipa.py`. Otherwise every check that needs a build is `Not run` ("no APK/IPA"): merged-manifest values, `debuggable`, exported components, permissions, binary protections and release flags. If CI is down, suggest a local `flutter build apk --release` or an archive.
 4. **Pins.** Run `check_pins.py --nsc <file>` for each network security config, adding `--host <host>` for a live match. A past `expiration` means Android stops enforcing the pins, so report it as a finding. A pin-set being present doesn't prove pinning works.
 5. **Read only the playbooks for the groups you hit** (see Routing), then decide each match.
@@ -110,7 +111,7 @@ Identify the stack (`detect_stack.py`) and the feature's MASVS groups. Read only
 |---|---|---|
 | `detect_stack.py` | `<root>` | `stacks`, `android_manifests`, `ios_plists`, `dependency_files` |
 | `scan_source.py` | `<root> [--stacks flutter,android,ios,react-native] [--include-deps]` | `stacks`; `matches[]`: `rule`, `control`, `file`, `line`, `snippet` (secrets redacted), `owner`, `status` (`match`/`unresolved`); `skipped_rules` |
-| `inspect_apk.py` | `<apk>` (aapt2 or apkanalyzer) | `min_sdk`, `target_sdk`, `allow_backup`, `uses_cleartext`, `network_security_config`, `exported`, `permissions`, `debuggable` |
+| `inspect_apk.py` | `<apk>` (aapt2 or apkanalyzer; found in the Android SDK build-tools if not on PATH) | `min_sdk`, `target_sdk`, `allow_backup`, `uses_cleartext`, `network_security_config`, `exported`, `permissions`, `debuggable` |
 | `inspect_ipa.py` | `<ipa>` (macOS: otool, plutil, unzip) | `bundle_id`, `ats`; `binaries[]`: `path`, `kind` (`dart-aot`/`objc-swift`/`c`), `pie`, `arc`, `stack_canary`, `note` |
 | `check_pins.py` | `--nsc <xml> [--host H --port 443 \| --chain PEM] [--today YYYY-MM-DD]` | `domains[]`: `pins`, `expiration`, `days_left`, `backup_pin`, `live_match`, `pinned_level` |
 | `make_report.py` | `<findings.json> --out <dir>` | `written` (report.md + .xlsx/.csv), or `error` + `details` |

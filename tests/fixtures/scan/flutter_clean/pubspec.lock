@@ -3,3 +3,7 @@ packages:
     dependency: "direct main"
     source: hosted
     version: "9.2.2"
+  cached_network_image:
+    dependency: "direct main"
+    source: hosted
+    version: "3.4.1"
