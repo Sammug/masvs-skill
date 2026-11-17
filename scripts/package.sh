@@ -14,8 +14,14 @@ VERSION="$(awk '
 
 [ -n "$VERSION" ] || { echo "version not found in masvs/SKILL.md" >&2; exit 1; }
 
+if git -C "$ROOT" rev-parse --is-inside-work-tree >/dev/null 2>&1 \
+  && [ -n "$(git -C "$ROOT" status --porcelain -- masvs)" ]; then
+  echo "masvs/ has uncommitted changes; commit or stash them before packaging" >&2
+  exit 1
+fi
+
 mkdir -p "$ROOT/dist"
 OUT="$ROOT/dist/masvs-$VERSION.zip"
 rm -f "$OUT"
-(cd "$ROOT" && zip -qr "$OUT" masvs -x '*/__pycache__/*' '*.pyc' '*.DS_Store')
+(cd "$ROOT" && zip -qr "$OUT" masvs -x '*/__pycache__/*' '*.pyc' '*.DS_Store' '*/.gitkeep')
 echo "$OUT"

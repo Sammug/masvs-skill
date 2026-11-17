@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import argparse
 import base64
 import hashlib
@@ -131,7 +133,7 @@ def apply_chain(entry: dict, levels: list[tuple[str, str]]) -> None:
 
 
 def main(argv: list[str]) -> None:
-    ap = argparse.ArgumentParser()
+    ap = argparse.ArgumentParser(prog="check_pins.py")
     ap.add_argument("--nsc", required=True)
     ap.add_argument("--host")
     ap.add_argument("--port", type=int, default=443)
@@ -139,7 +141,9 @@ def main(argv: list[str]) -> None:
     ap.add_argument("--today")
     try:
         args = ap.parse_args(argv[1:])
-    except SystemExit:
+    except SystemExit as e:
+        if e.code == 0:
+            raise
         emit({"error": "usage: check_pins.py --nsc FILE [--host H --port 443] [--chain PEM] [--today YYYY-MM-DD]"}, 2)
     try:
         today = date.fromisoformat(args.today) if args.today else date.today()

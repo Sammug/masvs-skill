@@ -608,3 +608,25 @@ def test_tracked_file_flagged_even_if_pattern_ignored(tmp_path):
 def test_sentry_init_delegating_to_configurator_not_flagged(tmp_path):
     write(tmp_path, {"lib/a.dart": "await SentryFlutter.init(\n  (options) => configureSentry(options),\n);\nawait Sentry.init(configureSentry);\n"})
     assert rules_hit(run(tmp_path, "--stacks", "flutter"), "FLT-TELEMETRY-4") == []
+
+
+def test_flutter_secure_storage_explicit_false_still_flagged():
+    res = run(FIX / "flutter_storage_false", "--stacks", "flutter")
+    assert lines(res, "FLT-STORAGE-2") == [1]
+
+
+def test_redact_more_token_formats():
+    cases = {
+        "ASIAIOSFODNN7EXAMPLE": "ASIA…",
+        "ghs_" + "A1b2" * 9: "ghs_…",
+        "ghu_" + "A1b2" * 9: "ghu_…",
+        "ghr_" + "A1b2" * 9: "ghr_…",
+        "sk_live_" + "A1b2C3d4" * 3: "sk_l…",
+        "rk_live_" + "A1b2C3d4" * 3: "rk_l…",
+        "sk-" + "A1b2C3d4E5" * 3: "sk-A…",
+        "sk-proj-" + "A1b2C3d4E5" * 3: "sk-p…",
+    }
+    for raw, expected in cases.items():
+        assert _common.redact(f"x={raw};") == f"x={expected};", raw
+    assert _common.redact("sk-short") == "sk-short"
+    assert _common.redact("task-force-alpha-bravo-charlie") == "task-force-alpha-bravo-charlie"

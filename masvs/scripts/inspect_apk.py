@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import json
 import os
 import re
@@ -23,7 +25,8 @@ def find_sdk_tool(name: str) -> str | None:
     if found:
         return found
     roots = [os.environ.get("ANDROID_HOME"), os.environ.get("ANDROID_SDK_ROOT"),
-             str(Path.home() / "Library" / "Android" / "sdk")]
+             str(Path.home() / "Library" / "Android" / "sdk"),
+             str(Path.home() / "Android" / "Sdk")]
     pattern = f"build-tools/*/{name}" if name == "aapt2" else f"cmdline-tools/*/bin/{name}"
     for root in roots:
         if not root:
@@ -149,6 +152,13 @@ def _analyse(root: dict, fallback_target: int | None = None) -> dict:
                 continue
         if flag:
             exported.append(entry)
+    notes: list[str] = []
+    if "debuggable" not in attrs:
+        debuggable = False
+    else:
+        debuggable = _bool_attr(attrs["debuggable"])
+        if debuggable is None:
+            notes.append("debuggable is set to an unresolved value: check the merged manifest or build flavor")
     return {
         "min_sdk": min_sdk if isinstance(min_sdk, int) else None,
         "target_sdk": target_sdk if isinstance(target_sdk, int) else None,
@@ -157,7 +167,8 @@ def _analyse(root: dict, fallback_target: int | None = None) -> dict:
         "network_security_config": nsc if isinstance(nsc, str) else None,
         "exported": exported,
         "permissions": perms,
-        "debuggable": _bool_attr(attrs.get("debuggable")) is True,
+        "debuggable": debuggable,
+        "notes": notes,
     }
 
 
@@ -185,6 +196,9 @@ def emit(payload: dict, code: int = 0) -> None:
 
 
 def main(argv: list[str]) -> None:
+    if len(argv) == 2 and argv[1] in ("-h", "--help"):
+        print("usage: inspect_apk.py <apk>")
+        sys.exit(0)
     if len(argv) != 2:
         emit({"error": "usage: inspect_apk.py <apk>"}, 2)
     apk = Path(argv[1])

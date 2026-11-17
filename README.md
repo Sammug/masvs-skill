@@ -26,8 +26,8 @@ Org-wide (optional): upload the zip as a claude.ai organization skill, if your o
 
 ## Requirements
 
-- `python3` (stdlib only).
-- Optional: `openpyxl` for .xlsx output (CSV is written without it).
+- Python 3.9 or newer, standard library only at runtime.
+- Optional: `openpyxl`, needed only for .xlsx output (CSV is written without it). The tests use it too.
 - `openssl` for certificate checks.
 - Android build-tools `aapt2` for APK checks (found automatically in the Android SDK).
 - macOS `otool` and `plutil` for IPA checks.
@@ -40,10 +40,10 @@ An excerpt of `report.md` (fake data):
 
 | Finding | MASVS Control | Severity | Status | Evidence |
 |---|---|---|---|---|
-| Backups enabled | MASVS-STORAGE-2 | Medium | Open | allow_backup: true in the built APK (verified) |
-| Cleartext traffic allowed | MASVS-NETWORK-1 | Medium | Open | debug network config only, release not checked (inferred) |
-| Plugin external-storage call | MASVS-STORAGE-2 | Info | False positive | match is inside a third-party package (inferred) |
-| Root detection bypass | MASVS-RESILIENCE-1 | Medium | Not run | needs a device and a hooking test (manual) |
+| Backups enabled | MASVS-STORAGE-2 | Medium | Open | [verified] allow_backup: true in the built APK |
+| Cleartext traffic allowed | MASVS-NETWORK-1 | Medium | Open | [inferred] debug network config only, release not checked |
+| Plugin external-storage call | MASVS-STORAGE-1 | Info | False positive | [inferred] match is inside a third-party package |
+| Root detection bypass | MASVS-RESILIENCE-1 | Medium | Not run | [manual] needs a device and a hooking test |
 
 ## Evidence and pass/fail
 
@@ -72,4 +72,4 @@ Content is based on OWASP MASVS, MASTG and MASWE (CC BY-SA 4.0), paraphrased, wi
 
 ## Privacy
 
-The scripts run locally and make no network calls, except `check_pins.py --host`, which connects to the host you name. Matched secrets are redacted to their first 4 characters, so full values never reach the JSON, Markdown or xlsx output.
+The scripts run locally and make no network calls, except `check_pins.py --host`, which connects to the host you name. Known token formats and long quoted literals are redacted to their first 4 characters in the JSON, Markdown and xlsx output.

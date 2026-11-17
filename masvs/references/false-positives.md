@@ -12,7 +12,7 @@ Commands assume you run from the skill directory (`scripts/...`) with `python3`.
 
 **Evidence:**
 - `python3 scripts/scan_source.py <app>`: no AND-STORAGE-1 match with `owner: app`.
-- `python3 scripts/scan_source.py ~/.pub-cache/hosted/pub.dev/path_provider_android-<locked version> --stacks android` (version from `pubspec.lock`): the AND-STORAGE-1 match is in the plugin's own sources. For an `owner` field, scan from `~/.pub-cache` with `--include-deps` and filter: `jq '.matches[] | select(.rule=="AND-STORAGE-1") | {file, owner}'`. A no-match is not proof of attribution; confirm the decompiled class's package.
+- `python3 scripts/scan_source.py ~/.pub-cache/hosted/pub.dev/path_provider_android-<locked version> --stacks android` (version from `pubspec.lock`): the AND-STORAGE-1 match is in the plugin's own sources. For an `owner` field, scan from `~/.pub-cache` with `--include-deps` and filter: `jq '.matches[] | select(.rule=="AND-STORAGE-1") | {file, owner}'`, or without jq `python3 -c 'import json,sys; [print(m["file"], m["owner"]) for m in json.load(sys.stdin)["matches"] if m["rule"]=="AND-STORAGE-1"]'`. A no-match is not proof of attribution; confirm the decompiled class's package.
 - `python3 scripts/inspect_apk.py app-release.apk`: `permissions` has no `READ_EXTERNAL_STORAGE`, `WRITE_EXTERNAL_STORAGE` or `MANAGE_EXTERNAL_STORAGE`.
 - `grep -rnE 'getExternalStorageDirectory|getExternalStoragePath' lib android/app/src` returns nothing; `flutter pub deps` shows which package pulls in the plugin.
 

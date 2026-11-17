@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import json
 import re
 import shutil
@@ -57,8 +59,18 @@ def ats_from_info(info: dict) -> dict:
     return ats if isinstance(ats, dict) else {}
 
 
+class ToolError(Exception):
+    pass
+
+
 def run(cmd: list[str]) -> str:
-    return subprocess.run(cmd, capture_output=True, text=True, timeout=300).stdout
+    tool = Path(cmd[0]).name
+    try:
+        return subprocess.run(cmd, capture_output=True, text=True, timeout=300).stdout
+    except subprocess.TimeoutExpired:
+        raise ToolError(f"{tool} failed: timed out") from None
+    except OSError as e:
+        raise ToolError(f"{tool} failed: {e.strerror or e}") from None
 
 
 def emit(payload: dict, code: int = 0) -> None:
@@ -66,12 +78,12 @@ def emit(payload: dict, code: int = 0) -> None:
     sys.exit(code)
 
 
-def read_plist(plutil: str, path: Path) -> dict:
+def read_plist(plutil: str, path: Path) -> dict | None:
     try:
         data = json.loads(run([plutil, "-convert", "json", "-o", "-", str(path)]))
     except ValueError:
-        return {}
-    return data if isinstance(data, dict) else {}
+        return None
+    return data if isinstance(data, dict) else None
 
 
 def inspect_binary(otool: str, binary: Path, rel: str) -> dict:
@@ -80,24 +92,52 @@ def inspect_binary(otool: str, binary: Path, rel: str) -> dict:
     return {"path": rel, "pie": header["pie"], **imports}
 
 
+def inspect_bundle(otool: str, plutil: str, bundle: Path, rel: str, notes: list[str]) -> tuple[dict, list[dict]]:
+    info = read_plist(plutil, bundle / "Info.plist")
+    if info is None:
+        notes.append(f"{rel}: Info.plist unreadable, ATS not assessed")
+    exe = (info or {}).get("CFBundleExecutable") or bundle.stem
+    binaries = []
+    if (bundle / exe).is_file():
+        binaries.append(inspect_binary(otool, bundle / exe, f"{rel}/{exe}"))
+    entry = {
+        "path": rel,
+        "bundle_id": (info or {}).get("CFBundleIdentifier"),
+        "ats": ats_from_info(info) if info is not None else None,
+    }
+    return entry, binaries
+
+
 def inspect_app(otool: str, plutil: str, work: Path) -> dict:
     apps = sorted((work / "Payload").glob("*.app"))
     if not apps:
         return {"error": "no Payload/*.app in ipa"}
     app = apps[0]
-    info = read_plist(plutil, app / "Info.plist")
-    exe = info.get("CFBundleExecutable") or app.stem
-    binaries = []
-    if (app / exe).is_file():
-        binaries.append(inspect_binary(otool, app / exe, f"{app.name}/{exe}"))
+    notes: list[str] = []
+    main_entry, binaries = inspect_bundle(otool, plutil, app, app.name, notes)
+    bundles = [main_entry]
     for fw in sorted((app / "Frameworks").glob("*.framework")):
-        fw_exe = read_plist(plutil, fw / "Info.plist").get("CFBundleExecutable") or fw.stem
+        fw_info = read_plist(plutil, fw / "Info.plist") or {}
+        fw_exe = fw_info.get("CFBundleExecutable") or fw.stem
         if (fw / fw_exe).is_file():
             binaries.append(inspect_binary(otool, fw / fw_exe, f"Frameworks/{fw.name}/{fw_exe}"))
-    return {"bundle_id": info.get("CFBundleIdentifier"), "ats": ats_from_info(info), "binaries": binaries}
+    for appex in sorted((app / "PlugIns").glob("*.appex")):
+        entry, appex_bins = inspect_bundle(otool, plutil, appex, f"PlugIns/{appex.name}", notes)
+        bundles.append(entry)
+        binaries += appex_bins
+    return {
+        "bundle_id": main_entry["bundle_id"],
+        "ats": main_entry["ats"],
+        "bundles": bundles,
+        "binaries": binaries,
+        "notes": notes,
+    }
 
 
 def main(argv: list[str]) -> None:
+    if len(argv) == 2 and argv[1] in ("-h", "--help"):
+        print("usage: inspect_ipa.py <ipa>")
+        sys.exit(0)
     if len(argv) != 2:
         emit({"error": "usage: inspect_ipa.py <ipa>"}, 2)
     ipa = Path(argv[1])
@@ -107,10 +147,15 @@ def main(argv: list[str]) -> None:
     if sys.platform != "darwin" or not (otool and plutil and unzip):
         emit({"skipped": "otool, plutil and unzip are required (macOS with Xcode command line tools)"})
     with tempfile.TemporaryDirectory() as tmp:
-        r = subprocess.run([unzip, "-q", "-o", str(ipa), "-d", tmp], capture_output=True, text=True)
-        if r.returncode not in (0, 1):
-            emit({"error": "could not unzip ipa"}, 2)
-        result = inspect_app(otool, plutil, Path(tmp))
+        try:
+            r = subprocess.run([unzip, "-q", "-o", str(ipa), "-d", tmp], capture_output=True, text=True, timeout=300)
+            if r.returncode not in (0, 1):
+                emit({"error": "could not unzip ipa"}, 2)
+            result = inspect_app(otool, plutil, Path(tmp))
+        except (subprocess.TimeoutExpired, OSError):
+            emit({"error": "unzip failed"}, 2)
+        except ToolError as e:
+            emit({"error": str(e)}, 2)
     if "error" in result:
         emit(result, 2)
     emit(result)

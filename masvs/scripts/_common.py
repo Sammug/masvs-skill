@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import os
 import re
 from pathlib import Path
@@ -18,15 +20,17 @@ def walk(root: Path, include_deps: bool = False) -> Iterator[Path]:
 
 
 SECRET_PATTERNS: dict[str, str] = {
-    "aws_access_key": r"\bAKIA[0-9A-Z]{16}\b",
+    "aws_access_key": r"\b(?:AKIA|ASIA)[0-9A-Z]{16}\b",
     "gitlab_pat": r"\bglpat-[0-9A-Za-z_\-]{20,}",
-    "github_token": r"\b(?:gh[po]_[0-9A-Za-z]{36}|github_pat_[0-9A-Za-z_]{22,})",
+    "github_token": r"\b(?:gh[pousr]_[0-9A-Za-z]{36}|github_pat_[0-9A-Za-z_]{22,})",
     "google_api_key": r"\bAIza[0-9A-Za-z_\-]{35}",
     "slack_token": r"\bxox[bp]-[0-9A-Za-z\-]{10,}",
     "private_key": (
         r"-----BEGIN (?:[A-Z]+ )*PRIVATE KEY(?: BLOCK)?-----"
         r'(?:[^\n"]*?-----END[^-\n]*-----)?[^\n"]*'
     ),
+    "stripe_live_key": r"\b[rs]k_live_[0-9A-Za-z]{16,}",
+    "sk_api_key": r"\bsk-[0-9A-Za-z_\-]{20,}",
     "jwt": r"\beyJ[0-9A-Za-z_\-]{8,}\.[0-9A-Za-z_\-]{8,}\.[0-9A-Za-z_\-]{8,}",
 }
 _SECRET_RE = re.compile("|".join(f"(?:{p})" for p in SECRET_PATTERNS.values()))

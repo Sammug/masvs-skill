@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import argparse
 import csv
 import json
@@ -79,12 +81,13 @@ def validate(data) -> list[str]:
         label = f"$.findings[{i}] ({f['title']})"
         evidence = str(f.get("evidence") or "").strip()
         kind = f.get("evidence_kind")
-        if evidence and not kind:
-            errors.append(f"{label}: evidence requires evidence_kind")
-        if f["status"] in ("Fixed", "Already mitigated") and not (evidence and kind == "verified"):
-            errors.append(f"{label}: status {f['status']} requires non-empty evidence with evidence_kind 'verified'")
-        if f["status"] == "False positive" and not evidence:
-            errors.append(f"{label}: status False positive requires non-empty evidence")
+        status = f["status"]
+        if status in ("Fixed", "Already mitigated") and not (evidence and kind == "verified"):
+            errors.append(f"{label}: status {status} requires non-empty evidence with evidence_kind 'verified'")
+        if status == "Fixed" and not str(f.get("retest_build") or "").strip():
+            errors.append(f"{label}: status Fixed requires a non-empty retest_build")
+        if status == "False positive" and not (evidence and kind in ("verified", "inferred")):
+            errors.append(f"{label}: status False positive requires non-empty evidence with evidence_kind 'verified' or 'inferred', not manual")
     return errors
 
 
@@ -213,10 +216,10 @@ def main(argv=None) -> int:
     try:
         data = json.loads(Path(args.findings).read_text(encoding="utf-8"))
     except (OSError, ValueError) as e:
-        return emit({"error": "cannot read findings", "details": [str(e)]}, 2)
+        return emit({"error": "cannot read findings", "details": [clean(e)]}, 2)
     errors = validate(data)
     if errors:
-        return emit({"error": "invalid findings", "details": errors}, 2)
+        return emit({"error": "invalid findings", "details": [clean(e) for e in errors]}, 2)
     out = Path(args.out)
     out.mkdir(parents=True, exist_ok=True)
     table = rows(data["findings"])

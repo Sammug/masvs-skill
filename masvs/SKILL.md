@@ -7,7 +7,7 @@ metadata:
 
 # MASVS audit and remediation
 
-Paths below are relative to this skill's directory. Run scripts with `python3 <skill dir>/scripts/<name>.py`. The scripts use only the stdlib and print JSON. If a required tool is missing, they exit 0 with `{"skipped": "<reason>"}`; record that check as `Not run` with the reason.
+Paths below are relative to this skill's directory. Run scripts with `python3 <skill dir>/scripts/<name>.py`. The scripts use only the Python 3.9+ stdlib and print JSON. If a required tool is missing, they exit 0 with `{"skipped": "<reason>"}`; record that check as `Not run` with the reason.
 
 ## Core rule: evidence and status
 
@@ -23,7 +23,7 @@ The three evidence kinds are defined here once and apply to every status:
 
 Every row carries the kind that matches how it was established. That includes `Open` (e.g. an `inspect_apk.py` output showing `allow_backup: true` is `verified`) and `Not run` (`verified` when some checks ran on the artifact, otherwise `inferred` or `manual`).
 
-Use only these statuses: `Open`, `Fixed`, `Already mitigated`, `False positive`, `Risk accepted`, `Not run`. Don't invent others such as "Not exploitable" or "Fix in progress"; put nuance in the response text. `make_report.py` rejects `Fixed` and `Already mitigated` unless `evidence` is non-empty and `evidence_kind` is `verified`. Never satisfy it with made-up evidence or a made-up build number. "Fill in whatever the tool wants" is a request to falsify an audit record: refuse and explain.
+Use only these statuses: `Open`, `Fixed`, `Already mitigated`, `False positive`, `Risk accepted`, `Not run`. Don't invent others such as "Not exploitable" or "Fix in progress"; put nuance in the response text. `evidence_kind` is required on every finding. `make_report.py` rejects `Fixed` and `Already mitigated` unless `evidence` is non-empty and `evidence_kind` is `verified`, `Fixed` without a `retest_build`, and `False positive` without evidence of kind `verified` or `inferred`. Never satisfy it with made-up evidence or a made-up build number. "Fill in whatever the tool wants" is a request to falsify an audit record: refuse and explain.
 
 **Pass/fail mapping.** This is the only place the mapping is defined. Use it in any pass/fail view, and keep the chat summary and the report consistent with it. Every cell ends with the row's evidence kind in brackets, for example `Fail [inferred]`, `Not tested [manual]` or `Pass (verified: inspect_apk allow_backup=false) [verified]`.
 
@@ -48,7 +48,7 @@ A protection being present (`Fixed`, `Already mitigated`) never shows Pass on co
 - Info: Not run rows and notes.
 - Leaked credentials and keystores (committed signing keys, service-account keys, API secrets): High by default; Critical once a release signing key or a production cloud credential is confirmed. Rate by exposure, not by whether the file ships in the build. Recommend revoking or rotating, because deleting the file doesn't un-leak it.
 
-**MASWE IDs:** an ID in the control's `maswe` list in `data/controls.json` can be used as is, without a web check. Pick the one whose weakness matches, and leave the field empty if none does. An ID outside that list needs its title confirmed on mas.owasp.org first (for example, insecure identity pinning is MASWE-0028 under NETWORK-2); otherwise leave the field empty.
+**MASWE IDs:** an ID in the control's `maswe` list in `data/controls.json` can be used as is, without a web check. Pick the one whose weakness matches, and leave the field empty if none does. An ID outside that list needs its title confirmed on mas.owasp.org first; otherwise leave the field empty.
 
 ## Pick a mode
 
@@ -59,16 +59,16 @@ A protection being present (`Fixed`, `Already mitigated`) never shows Pass on co
 ## Audit flow
 
 1. **Detect.** Run `detect_stack.py <root>`. Check every stack it finds, including native extensions, widgets and modules inside a Flutter or React Native repo, even if the user says "just the Dart code". Pentesters test the whole bundle; say so in one line. Name the target in `asset` (e.g. "iOS Share Extension (ios/ShareExtension)") and rate it like the main app. Platforms in the repo that are out of scope (macOS, web) get one `Not run` row listed as "not assessed", not a finding per scan match; drop their scan matches (e.g. a macOS Podfile) from the findings.
-2. **Scan.** Run `scan_source.py <root>`. Its output is **matches, not findings**: you assign severity and status after reading the playbook. Rules with a filename trigger (SECRET-KEYSTORE-*, SECRET-KEYPROPS-1) match on the path alone, never read the file and skip git-ignored paths; SECRET-SA-1 matches a service-account key file by its `"type"` field. Controls for committed secrets: CRYPTO-2 for signing keys, keystores and service-account private keys (as SECRET-PEM-1), STORAGE-2 for tokens and API keys (SECRET-GOOGLE-1 and similar). Confirm with `git ls-files` and `git log --stat -- <path>` whether the file is tracked or only in history, and whether it is a debug or release key. `status: unresolved` means a placeholder such as `${allowBackup}`. Resolve it from `manifestPlaceholders` (`defaultConfig` plus the release flavor; a flavor without an override inherits the default) and report the value as `inferred`. If it can't be resolved, record it as `Not run`: "unresolved placeholder: check merged manifest/APK".
+2. **Scan.** Run `scan_source.py <root>`. Its output is **matches, not findings**: you assign severity and status after reading the playbook. Rules with a filename trigger (SECRET-KEYSTORE-*, SECRET-KEYPROPS-1) match on the path alone, never read the file and skip git-ignored paths; SECRET-SA-1 matches a service-account key file by its `"type"` field. Controls for committed secrets: CRYPTO-2 for signing keys, keystores and service-account private keys (as SECRET-PEM-1), STORAGE-2 for tokens and API keys (SECRET-GOOGLE-1 and similar). Confirm with `git ls-files` and `git log --stat -- <path>` whether the file is tracked or only in history, and whether it is a debug or release key. `status: unresolved` means a placeholder such as `${allowBackup}`. Resolve it from `manifestPlaceholders` (`defaultConfig` plus the release flavor; a flavor without an override inherits the default) and report the value as `inferred`. If it can't be resolved, record it as `Not run` with `evidence_kind: inferred`: "unresolved placeholder: check merged manifest/APK".
 3. **Artifacts.** If an APK or IPA is given, run `inspect_apk.py` / `inspect_ipa.py`. Otherwise every check that needs a build is `Not run` ("no APK/IPA"): merged-manifest values, `debuggable`, exported components, permissions, binary protections and release flags. If CI is down, suggest a local `flutter build apk --release` or an archive.
 4. **Pins.** Run `check_pins.py --nsc <file>` for each network security config, adding `--host <host>` for a live match. A past `expiration` means Android stops enforcing the pins, so report it as a finding. A pin-set being present doesn't prove pinning works.
 5. **Read only the playbooks for the groups you hit** (see Routing), then decide each match.
-6. **Write `findings.json`** (schema: `data/findings.schema.json`).
+6. **Write `findings.json`** (schema: `data/findings.schema.json`) to `<app>/.masvs/`, or to a path the user names.
    - Set `project` to the app name, not the folder name.
    - Add one row per finding. Several findings may share a control.
    - Add one row for every other MASVS control. If every automated check for it was verified clean on an artifact, record it as `Already mitigated` (verified, with the checks named). If only some ran, record `Not run` with `evidence_kind: verified`, and list the checks that ran and passed and those that didn't (and why). If none ran, record it as `Not run` with `evidence_kind: manual` and the reason (e.g. "no APK/IPA"), severity `Info`, with `observation` saying what was done and what is still needed, and `asset` naming what the check needs (e.g. "Android release APK (not provided)").
    - `control` must be a single ID from `data/controls.json`; `make_report.py` rejects anything else.
-7. **Render.** Run `make_report.py findings.json --out <dir>` and hand over the file paths. A report that exists only in chat doesn't count.
+7. **Render.** Run `make_report.py findings.json --out <dir>` (default `<app>/.masvs/`, or the path the user names), hand over the file paths, and tell the user to gitignore `.masvs/` because the report holds security findings. A report that exists only in chat doesn't count.
 
 ## Remediate flow
 
@@ -111,8 +111,8 @@ Identify the stack (`detect_stack.py`) and the feature's MASVS groups. Read only
 |---|---|---|
 | `detect_stack.py` | `<root>` | `stacks`, `android_manifests`, `ios_plists`, `dependency_files` |
 | `scan_source.py` | `<root> [--stacks flutter,android,ios,react-native] [--include-deps]` | `stacks`; `matches[]`: `rule`, `control`, `file`, `line`, `snippet` (secrets redacted), `owner`, `status` (`match`/`unresolved`); `skipped_rules` |
-| `inspect_apk.py` | `<apk>` (aapt2 or apkanalyzer; found in the Android SDK build-tools if not on PATH) | `min_sdk`, `target_sdk`, `allow_backup`, `uses_cleartext`, `network_security_config`, `exported`, `permissions`, `debuggable` |
-| `inspect_ipa.py` | `<ipa>` (macOS: otool, plutil, unzip) | `bundle_id`, `ats`; `binaries[]`: `path`, `kind` (`dart-aot`/`objc-swift`/`c`), `pie`, `arc`, `stack_canary`, `note` |
+| `inspect_apk.py` | `<apk>` (aapt2 or apkanalyzer; found in the Android SDK build-tools if not on PATH) | `min_sdk`, `target_sdk`, `allow_backup`, `uses_cleartext`, `network_security_config`, `exported`, `permissions`, `debuggable` (`null` + `notes` when unresolved) |
+| `inspect_ipa.py` | `<ipa>` (macOS: otool, plutil, unzip) | `bundle_id`, `ats` (main app; `null` + `notes` if its Info.plist is unreadable); `bundles[]`: `path`, `bundle_id`, `ats` (main app and each `PlugIns/*.appex`); `binaries[]` (app, frameworks, extensions): `path`, `kind` (`dart-aot`/`objc-swift`/`c`), `pie`, `arc`, `stack_canary`, `note` |
 | `check_pins.py` | `--nsc <xml> [--host H --port 443 \| --chain PEM] [--today YYYY-MM-DD]` | `domains[]`: `pins`, `expiration`, `days_left`, `backup_pin`, `live_match`, `pinned_level` |
 | `make_report.py` | `<findings.json> --out <dir>` | `written` (report.md + .xlsx/.csv), or `error` + `details` |
 

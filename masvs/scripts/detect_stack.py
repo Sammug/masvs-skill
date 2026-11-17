@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import json
 import re
 import sys
@@ -85,6 +87,9 @@ def _add_native_dirs(project: Path, stacks: set[str]) -> None:
 
 
 def main(argv: list[str]) -> int:
+    if len(argv) == 2 and argv[1] in ("-h", "--help"):
+        print("usage: detect_stack.py <root>")
+        return 0
     if len(argv) != 2:
         print(json.dumps({"error": "usage: detect_stack.py <root>"}))
         return 2

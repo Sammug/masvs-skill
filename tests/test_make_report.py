@@ -187,11 +187,50 @@ def test_csv_formula_neutralised(tmp_path, monkeypatch):
     assert rows[1][2] == "'" + FORMULA
 
 
-def test_evidence_requires_kind():
-    f = finding(status="Open")
-    del f["evidence_kind"]
+def test_evidence_kind_required_on_every_finding():
+    for status, ev in (("Open", "ev"), ("Not run", "")):
+        f = finding(status=status, evidence=ev)
+        del f["evidence_kind"]
+        errs = make_report.validate(doc(f))
+        assert any("evidence_kind" in e and "[0]" in e for e in errs), status
+
+
+def test_false_positive_rejects_manual_kind():
+    errs = make_report.validate(doc(finding(status="False positive", evidence="x", evidence_kind="manual")))
+    assert any("False positive" in e and "manual" in e for e in errs)
+    for kind in ("verified", "inferred"):
+        assert make_report.validate(doc(finding(status="False positive", evidence="x", evidence_kind=kind))) == []
+
+
+@pytest.mark.parametrize("retest", ["", "   ", None])
+def test_fixed_requires_retest_build(retest):
+    f = finding(status="Fixed")
+    if retest is None:
+        del f["retest_build"]
+    else:
+        f["retest_build"] = retest
     errs = make_report.validate(doc(f))
-    assert any("requires evidence_kind" in e and "[0]" in e for e in errs)
+    assert any("retest_build" in e for e in errs)
+
+
+def test_already_mitigated_does_not_need_retest_build():
+    f = finding(status="Already mitigated")
+    del f["retest_build"]
+    assert make_report.validate(doc(f)) == []
+
+
+def test_validation_details_never_echo_secrets(tmp_path):
+    bad = doc(finding(title=f"leak {TOKEN}", severity=f"Sev {TOKEN}", control=f"X {TOKEN}", status="Open"))
+    p = write(tmp_path, bad)
+    r = subprocess.run([sys.executable, str(SCRIPTS / "make_report.py"), str(p), "--out", str(tmp_path / "o")],
+                       capture_output=True, text=True)
+    assert r.returncode == 2
+    assert TOKEN not in r.stdout
+    bad = doc(finding(title=f"leak {TOKEN}", status="Fixed", evidence="", retest_build=""))
+    p = write(tmp_path, bad)
+    r = subprocess.run([sys.executable, str(SCRIPTS / "make_report.py"), str(p), "--out", str(tmp_path / "o")],
+                       capture_output=True, text=True)
+    assert r.returncode == 2 and TOKEN not in r.stdout and "ghp_" in r.stdout
 
 
 @pytest.mark.parametrize("status", ["Fixed", "Already mitigated"])

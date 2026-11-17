@@ -19,12 +19,12 @@ MASTG candidates: `mastg_tests` in `data/controls.json` (CODE-3 and CODE-4 share
   - Release builds: `--obfuscate --split-debug-info` (see `resilience.md`), `debuggable` false.
 - **Android**
   - AND-SDK-1: minSdk < 29, or unresolved (`flutter.minSdkVersion`, `rootProject.ext`). Read the real value from `inspect_apk.py` → `min_sdk`, `target_sdk`.
-  - `inspect_apk.py` → `debuggable` must be false in release.
+  - `inspect_apk.py` → `debuggable` must be false in release (`null` means unresolved: check the merged manifest).
   - `./gradlew :app:dependencies` for transitive native libraries; outdated Play services / OkHttp / WebView-related libs.
   - SQL: `rawQuery`/`execSQL` with concatenation; `ContentProvider` selection args.
 - **iOS**
   - IOS-HARDEN-1 (hint only): no `-fstack-protector` in the Podfile. Clang usually enables a stack protector by default; verify the built binaries instead of trusting the hint.
-  - `python3 scripts/inspect_ipa.py app.ipa` → per binary `pie`, `stack_canary`, `arc`, `kind`. `None` means not applicable (pure Swift, Dart AOT), not "missing".
+  - `python3 scripts/inspect_ipa.py app.ipa` → per binary `pie`, `stack_canary`, `arc`, `kind`. `null` means not applicable (pure Swift, Dart AOT), not "missing".
   - `Podfile.lock` versions vs advisories.
 - **React Native**
   - `npm audit` / `osv-scanner` on the lockfile; native modules' Pods and Gradle deps too.
@@ -58,12 +58,12 @@ post_install do |installer|
 end
 ```
 
-Stack canaries and Swift: Swift relies on memory safety and, unlike Clang for C/ObjC, adds stack protectors only to a narrow set of functions (and only in newer compilers), so the `___stack_chk_*` symbols may be absent from Swift binaries (newer compilers can emit them). `inspect_ipa.py` reports pure Swift as `None` (n/a) with a note. Swift frameworks with ObjC interop can report `False` even though only Swift code is in them; check whether the framework has any C/ObjC sources before treating it as a finding.
+Stack canaries and Swift: Swift relies on memory safety and, unlike Clang for C/ObjC, adds stack protectors only to a narrow set of functions (and only in newer compilers), so the `___stack_chk_*` symbols may be absent from Swift binaries (newer compilers can emit them). `inspect_ipa.py` reports pure Swift as `null` (n/a) with a note. Swift frameworks with ObjC interop can report `False` even though only Swift code is in them; check whether the framework has any C/ObjC sources before treating it as a finding.
 
 ## Evidence to show the auditor
 
 - Dependency removal: `grep -c sqflite pubspec.lock` → 0; `flutter pub deps | grep -i sqflite` → nothing; `unzip -l app.ipa | grep -i sqflite` → nothing (no `sqflite.framework`); `unzip -p app.apk 'classes*.dex' | strings | grep -ci sqflite` → 0.
-- `python3 scripts/inspect_ipa.py app.ipa`: `pie: true` everywhere; `stack_canary: true` for C/ObjC binaries; `None` with a note for Swift-only/Dart AOT; `kind` per binary.
+- `python3 scripts/inspect_ipa.py app.ipa`: `pie: true` everywhere; `stack_canary: true` for C/ObjC binaries; `null` with a note for Swift-only/Dart AOT; `kind` per binary.
 - `python3 scripts/inspect_apk.py app.apk`: `min_sdk`, `target_sdk`, `debuggable: false`.
 - SCA report (tool, version, date) with zero high/critical open, or each remaining one triaged (not reachable / no fix / accepted).
 - For forced update: a screen recording of the gate with a raised `min_version` on a test config.

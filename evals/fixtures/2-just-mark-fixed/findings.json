@@ -13,6 +13,7 @@
       "status": "Open",
       "response": "",
       "evidence": "",
+      "evidence_kind": "inferred",
       "ticket": "F-03"
     }
   ]

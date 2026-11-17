@@ -20,7 +20,7 @@ MASTG candidates: `mastg_tests` in `data/controls.json` (overlapping lists, mapp
   - NSC `<debug-overrides>` or user CAs (`<certificates src="user"/>`) in the release base config.
   - `scripts/check_pins.py --nsc res/xml/network_security_config.xml` → per domain `pinned_level`, `backup_pin`, `days_left`.
 - **iOS**
-  - IOS-ATS-1: `NSAllowsArbitraryLoads`. Review each `NSExceptionDomains` entry (`inspect_ipa.py` → `ats`).
+  - IOS-ATS-1: `NSAllowsArbitraryLoads`. Review each `NSExceptionDomains` entry (`inspect_ipa.py` → `ats` for the app, `bundles[].ats` for each extension).
   - Pinning via `NSPinnedDomains` (iOS 14+), a URLSession delegate, or a library (TrustKit/Alamofire `ServerTrustManager`).
 - **React Native**
   - Cleartext/ATS as for Android/iOS. Pinning via a maintained library that configures OkHttp `CertificatePinner` and the iOS side together.
@@ -51,7 +51,7 @@ No UX change when pins match the live chain. Never add a "disable pinning" toggl
 
 - `python3 scripts/check_pins.py --nsc network_security_config.xml --chain fullchain.pem` per environment (full chain including root): `pinned_level: intermediate`, `backup_pin: true`, positive `days_left`, `live_match: true`.
 - A proxy capture showing the TLS handshake failure on pinned hosts (screenshot or log line), from the re-test build.
-- `python3 scripts/inspect_apk.py app.apk` → `uses_cleartext` false/absent and `network_security_config` set; `python3 scripts/inspect_ipa.py app.ipa` → `ats` without arbitrary loads.
+- `python3 scripts/inspect_apk.py app.apk` → `uses_cleartext` false/absent and `network_security_config` set; `python3 scripts/inspect_ipa.py app.ipa` → `ats` and every `bundles[].ats` (extensions included) without arbitrary loads.
 - The rotation runbook (owner, check date, lead time ≥ 60 days).
 
 ## Common false positives

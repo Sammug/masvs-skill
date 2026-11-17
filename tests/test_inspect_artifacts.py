@@ -3,6 +3,8 @@ import subprocess
 import sys
 from pathlib import Path
 
+import pytest
+
 ROOT = Path(__file__).resolve().parent.parent
 SCRIPTS = ROOT / "masvs" / "scripts"
 FIX = ROOT / "tests" / "fixtures" / "artifacts"
@@ -184,3 +186,129 @@ def test_pure_swift_with_canary_has_no_canary_note():
     assert r["stack_canary"] is True
     assert r["arc"] is None
     assert "canary" not in (r["note"] or "")
+
+
+def _debuggable_text(value):
+    return fx("aapt_xmltree.txt").replace(
+        "        A: http://schemas.android.com/apk/res/android:allowBackup(0x01010280)=false",
+        f"        A: http://schemas.android.com/apk/res/android:debuggable(0x0101000f){value}\n"
+        "        A: http://schemas.android.com/apk/res/android:allowBackup(0x01010280)=false",
+    )
+
+
+def test_debuggable_absent_is_false_without_note():
+    m = inspect_apk.parse_xmltree(fx("aapt_xmltree.txt"))
+    assert m["debuggable"] is False
+    assert m["notes"] == []
+
+
+@pytest.mark.parametrize("value", ["=@0x7f050001", '="${debug}"', "=0x7f050001"])
+def test_debuggable_unresolved_is_null_with_note(value):
+    m = inspect_apk.parse_xmltree(_debuggable_text(value))
+    assert m["debuggable"] is None
+    assert any("debuggable" in n for n in m["notes"])
+
+
+def test_debuggable_unresolved_in_apkanalyzer_xml():
+    xml = ('<manifest xmlns:android="http://schemas.android.com/apk/res/android">'
+           '<application android:debuggable="@bool/dbg"/></manifest>')
+    m = inspect_apk.parse_manifest_xml(xml)
+    assert m["debuggable"] is None
+    assert any("debuggable" in n for n in m["notes"])
+
+
+def _fake_ipa(tmp_path, main_plist, appex_plist):
+    app = tmp_path / "Payload" / "Demo.app"
+    appex = app / "PlugIns" / "Share.appex"
+    appex.mkdir(parents=True)
+    (app / "Info.plist").write_text(main_plist)
+    (app / "Demo").write_bytes(b"x")
+    (appex / "Info.plist").write_text(appex_plist)
+    (appex / "Share").write_bytes(b"x")
+    return tmp_path
+
+
+def _fake_run(cmd):
+    if cmd[0] == "plutil":
+        return Path(cmd[-1]).read_text()
+    if cmd[1] == "-hv":
+        return fx("otool_hv.txt")
+    return fx("otool_Iv_runner.txt")
+
+
+MAIN_PLIST = json.dumps({"CFBundleIdentifier": "com.example.demo", "CFBundleExecutable": "Demo",
+                         "NSAppTransportSecurity": {"NSAllowsArbitraryLoads": False}})
+APPEX_PLIST = json.dumps({"CFBundleIdentifier": "com.example.demo.share", "CFBundleExecutable": "Share",
+                          "NSAppTransportSecurity": {"NSAllowsArbitraryLoads": True}})
+
+
+def test_appex_binaries_and_ats_reported(tmp_path, monkeypatch):
+    monkeypatch.setattr(inspect_ipa, "run", _fake_run)
+    r = inspect_ipa.inspect_app("otool", "plutil", _fake_ipa(tmp_path, MAIN_PLIST, APPEX_PLIST))
+    paths = [b["path"] for b in r["binaries"]]
+    assert "Demo.app/Demo" in paths
+    assert "PlugIns/Share.appex/Share" in paths
+    assert r["ats"] == {"NSAllowsArbitraryLoads": False}
+    by_id = {b["bundle_id"]: b for b in r["bundles"]}
+    assert by_id["com.example.demo"]["ats"] == {"NSAllowsArbitraryLoads": False}
+    assert by_id["com.example.demo.share"]["ats"] == {"NSAllowsArbitraryLoads": True}
+    assert by_id["com.example.demo.share"]["path"] == "PlugIns/Share.appex"
+    assert r["bundles"][0]["bundle_id"] == "com.example.demo"
+
+
+def test_unreadable_plist_gives_null_ats_with_note(tmp_path, monkeypatch):
+    monkeypatch.setattr(inspect_ipa, "run", _fake_run)
+    r = inspect_ipa.inspect_app("otool", "plutil", _fake_ipa(tmp_path, "garbage", APPEX_PLIST))
+    assert r["ats"] is None
+    assert any("Info.plist" in n for n in r["notes"])
+    assert r["bundles"][0]["ats"] is None
+
+
+def test_plist_without_ats_key_is_empty_dict(tmp_path, monkeypatch):
+    monkeypatch.setattr(inspect_ipa, "run", _fake_run)
+    plain = json.dumps({"CFBundleIdentifier": "com.example.demo", "CFBundleExecutable": "Demo"})
+    r = inspect_ipa.inspect_app("otool", "plutil", _fake_ipa(tmp_path, plain, APPEX_PLIST))
+    assert r["ats"] == {}
+    assert r["notes"] == []
+
+
+def test_ipa_run_wraps_timeout_and_oserror(monkeypatch):
+    def boom_timeout(*a, **k):
+        raise subprocess.TimeoutExpired("otool", 1)
+
+    def boom_os(*a, **k):
+        raise OSError(2, "No such file")
+
+    monkeypatch.setattr(inspect_ipa.subprocess, "run", boom_timeout)
+    with pytest.raises(inspect_ipa.ToolError):
+        inspect_ipa.run(["otool", "-hv", "x"])
+    monkeypatch.setattr(inspect_ipa.subprocess, "run", boom_os)
+    with pytest.raises(inspect_ipa.ToolError):
+        inspect_ipa.run(["otool", "-hv", "x"])
+
+
+def test_ipa_main_reports_tool_error_as_json(tmp_path, monkeypatch, capsys):
+    ipa = tmp_path / "a.ipa"
+    ipa.write_bytes(b"PK")
+    monkeypatch.setattr(inspect_ipa.sys, "platform", "darwin")
+    monkeypatch.setattr(inspect_ipa.shutil, "which", lambda t: "/bin/" + t)
+
+    def boom(*a, **k):
+        raise subprocess.TimeoutExpired("unzip", 1)
+
+    monkeypatch.setattr(inspect_ipa.subprocess, "run", boom)
+    with pytest.raises(SystemExit) as e:
+        inspect_ipa.main(["inspect_ipa.py", str(ipa)])
+    assert e.value.code == 2
+    assert "error" in json.loads(capsys.readouterr().out)
+
+
+def test_android_linux_sdk_path_searched(tmp_path, monkeypatch):
+    tool = tmp_path / "Android" / "Sdk" / "build-tools" / "34.0.0" / "aapt2"
+    tool.parent.mkdir(parents=True)
+    tool.write_text("")
+    monkeypatch.setenv("PATH", "")
+    monkeypatch.delenv("ANDROID_HOME", raising=False)
+    monkeypatch.delenv("ANDROID_SDK_ROOT", raising=False)
+    monkeypatch.setattr(inspect_apk.Path, "home", classmethod(lambda cls: tmp_path))
+    assert inspect_apk.find_sdk_tool("aapt2") == str(tool)

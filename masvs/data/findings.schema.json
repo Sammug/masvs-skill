@@ -10,7 +10,7 @@
       "type": "array",
       "items": {
         "type": "object",
-        "required": ["title", "control", "asset", "observation", "severity", "status"],
+        "required": ["title", "control", "asset", "observation", "severity", "status", "evidence_kind"],
         "properties": {
           "title": {"type": "string"},
           "control": {"type": "string"},
