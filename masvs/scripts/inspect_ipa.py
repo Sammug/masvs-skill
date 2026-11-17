@@ -31,7 +31,8 @@ def parse_otool_imports(text: str, name: str = "") -> dict:
         if has_swift and not has_rr:
             arc = None
             canary = canary or None
-            notes.append("pure Swift: canary not emitted by compiler")
+            if canary is None:
+                notes.append("pure Swift: canary not emitted by compiler")
             notes.append("ARC is Swift's default (no Objective-C retain/release imports)")
         else:
             arc = "_objc_release" in symbols or "_objc_autoreleaseReturnValue" in symbols

@@ -177,3 +177,10 @@ def test_unknown_target_sdk_marks_export_unknown():
     entry = next(e for e in m["exported"] if e["name"] == "com.example.app.BootReceiver")
     assert entry["exported"] == "unknown"
     assert entry["permission"] is None
+
+
+def test_pure_swift_with_canary_has_no_canary_note():
+    r = inspect_ipa.parse_otool_imports("0x1 1 _swift_allocObject\n0x2 2 ___stack_chk_fail\n", "Lib")
+    assert r["stack_canary"] is True
+    assert r["arc"] is None
+    assert "canary" not in (r["note"] or "")
