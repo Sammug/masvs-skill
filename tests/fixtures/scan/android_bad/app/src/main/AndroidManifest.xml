@@ -1,0 +1,33 @@
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <application
+        android:allowBackup="false"
+        android:usesCleartextTraffic="true"
+        android:networkSecurityConfig="@xml/network_security_config"
+        android:label="demo">
+        <activity android:name=".Main" android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN"/>
+                <category android:name="android.intent.category.LAUNCHER"/>
+            </intent-filter>
+        </activity>
+        <service android:name=".Sync" android:exported="true"/>
+        <receiver
+            android:name=".Ping"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="demo.PING"/>
+            </intent-filter>
+        </receiver>
+        <provider
+            android:name=".Docs"
+            android:authorities="demo.docs"
+            android:exported="true"
+            android:readPermission="demo.READ"
+            android:writePermission="demo.WRITE"/>
+        <service
+            android:name=".Guarded"
+            android:exported="true"
+            android:permission="demo.BIND"/>
+        <service android:name=".Internal" android:exported="false"/>
+    </application>
+</manifest>

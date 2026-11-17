@@ -1,0 +1,5 @@
+packages:
+  flutter_secure_storage:
+    dependency: "direct main"
+    source: hosted
+    version: "9.2.2"

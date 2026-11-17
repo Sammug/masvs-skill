@@ -1,0 +1,2 @@
+nothing secret here
+glpat- is the prefix of a gitlab token

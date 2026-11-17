@@ -1,4 +1,5 @@
 import os
+import re
 from pathlib import Path
 from typing import Iterator
 
@@ -14,3 +15,19 @@ def walk(root: Path, include_deps: bool = False) -> Iterator[Path]:
         dirnames[:] = sorted(d for d in dirnames if d not in pruned)
         for name in sorted(filenames):
             yield Path(dirpath) / name
+
+
+SECRET_PATTERNS: dict[str, str] = {
+    "aws_access_key": r"\bAKIA[0-9A-Z]{16}\b",
+    "gitlab_pat": r"\bglpat-[0-9A-Za-z_\-]{20,}",
+    "github_token": r"\b(?:gh[po]_[0-9A-Za-z]{36}|github_pat_[0-9A-Za-z_]{22,})",
+    "google_api_key": r"\bAIza[0-9A-Za-z_\-]{35}",
+    "slack_token": r"\bxox[bp]-[0-9A-Za-z\-]{10,}",
+    "private_key": r"-----BEGIN (?:[A-Z]+ )*PRIVATE KEY(?: BLOCK)?-----",
+    "jwt": r"\beyJ[0-9A-Za-z_\-]{8,}\.[0-9A-Za-z_\-]{8,}\.[0-9A-Za-z_\-]{8,}",
+}
+_SECRET_RE = re.compile("|".join(f"(?:{p})" for p in SECRET_PATTERNS.values()))
+
+
+def redact(text: str) -> str:
+    return _SECRET_RE.sub(lambda m: m.group(0)[:4] + "\u2026", text)
