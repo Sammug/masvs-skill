@@ -19,7 +19,16 @@ Paths below are relative to this skill's directory. Run scripts with `python3 <s
 | `inferred` | Read from source or config, not confirmed in a build | the source manifest, `build.gradle`, Dart code, `scan_source.py` matches |
 | `manual` | Needs a person or device to exercise it | server-side auth, IDOR, hooking, runtime behaviour |
 
-Reading the config only gives you inferred evidence, never a Pass. Use only the statuses `Open`, `Fixed`, `Already mitigated`, `False positive`, `Risk accepted` and `Not run`. Don't invent others ("Not exploitable", "Fix in progress", "Pass (config only)"). Put nuance in the response text.
+Reading the config only gives you inferred evidence, never a Pass. `check_pins.py --nsc` alone is `inferred`; with `--host` the live match is `verified`. Every row carries an `evidence_kind`, Open and Not run rows included: `inferred` if source or a scan showed it, `manual` if nothing has exercised it. Use only the statuses `Open`, `Fixed`, `Already mitigated`, `False positive`, `Risk accepted` and `Not run`. Don't invent others ("Not exploitable", "Fix in progress", "Pass (config only)"). Put nuance in the response text. There is deliberately no Pass: a clean scan doesn't verify a control.
+
+**Severity** (you assign it; the scanner doesn't):
+- Critical: a remotely exploitable compromise of accounts or data.
+- High: credentials, tokens or traffic exposed (a shipped secret, cleartext with a token, a token readable while locked).
+- Medium: needs device access or a specific condition (backups, weak storage of non-secret data, an expired pin-set behind TLS).
+- Low: defence in depth.
+- Info: Not run rows and notes.
+
+**MASWE IDs:** use only IDs that appear in that control's `maswe` list in `data/controls.json`, and only after confirming the weakness title on mas.owasp.org (for example, insecure identity pinning is MASWE-0028 under NETWORK-2). If you can't confirm one, leave `maswe` empty; don't guess.
 
 ## Pick a mode
 
@@ -29,12 +38,12 @@ Reading the config only gives you inferred evidence, never a Pass. Use only the 
 
 ## Audit flow
 
-1. **Detect.** Run `detect_stack.py <root>`. Every stack it finds gets checked, including native extensions, widgets and modules inside a Flutter or RN repo, even if the user says "just the Dart code". Pentesters test the whole bundle. Say in one line why you went beyond what they asked.
-2. **Scan.** Run `scan_source.py <root>`. Its output is **matches, not findings**. You assign severity and status after reading the matching playbook. `status: unresolved` means a placeholder such as `${allowBackup}`: report it as unresolved and say to check the merged manifest or APK. It is neither pass nor fail.
+1. **Detect.** Run `detect_stack.py <root>`. Every stack it finds gets checked, including native extensions, widgets and modules inside a Flutter or RN repo, even if the user says "just the Dart code". Pentesters test the whole bundle. Say in one line why you went beyond what they asked. Name the target in `asset` (e.g. "iOS Share Extension (ios/ShareExtension)"), and rate it like the main app: an extension runs with the app's data and keychain group.
+2. **Scan.** Run `scan_source.py <root>`. Its output is **matches, not findings**. You assign severity and status after reading the matching playbook. `status: unresolved` means a placeholder such as `${allowBackup}`: report it as unresolved and say to check the merged manifest or APK. It is neither pass nor fail. First try to resolve it from `manifestPlaceholders` (`defaultConfig` plus the release flavor). If that resolves it, report the resolved value as `inferred`. If not, it's `Not run` with the reason "unresolved placeholder: check merged manifest/APK".
 3. **Artifacts.** If an APK or IPA was given, run `inspect_apk.py` / `inspect_ipa.py`. If not, every check that needs one is **Not run** (reason: "no APK/IPA"). Those checks are the merged-manifest values, `debuggable`, exported components, permissions, binary protections (PIE, ARC, stack canaries) and release flags. Suggest a local `flutter build apk --release` / archive if CI is down.
 4. **Pins.** For each Android network security config, run `check_pins.py --nsc <file>` (add `--host <host>` for a live match). A past `expiration` means Android stops enforcing the pins: report it as a finding. A pin-set being present is not proof that pinning works.
 5. **Read only the playbooks for the groups you hit** (see the routing table below), then decide severity, status and recommendation for each match.
-6. **Write `findings.json`** (schema: `data/findings.schema.json`). One entry per finding, plus one entry per control group you could not test (status `Not run`, `evidence_kind: manual`, and in `observation` what is needed).
+6. **Write `findings.json`** (schema: `data/findings.schema.json`). Set `project` to the app name (from pubspec, the manifest label or the plist), not the folder name. Include one entry per finding. Also include one entry for **every MASVS control that has no finding**, with status `Not run` and severity `Info`. In `observation`, put what was done ("static scan: no matches") and what is still needed ("needs APK", "manual: server-side"). `control` must be a single ID from `data/controls.json`, because `make_report.py` rejects anything else, so write one row per control and don't group several under one ID. The chat summary and the report must list the same rows.
 7. **Render.** Run `make_report.py findings.json --out <dir>`. It writes `report.md` and `report.xlsx`, or `report.csv` without openpyxl. Hand over the file paths. A report that exists only in chat doesn't count.
 
 If the user asks for a "simple pass/fail per control", give the table, but each row still shows its evidence kind. Untested controls (often AUTH, RESILIENCE, PRIVACY and server-side checks) are `Not run` or need a manual test, never Pass. Say briefly why: a green row the pentest then breaks costs more than an honest gap.
@@ -48,15 +57,16 @@ For each auditor finding:
 3. **Classify:**
    - **Fix**: the issue is real in the shipped build.
    - **Already mitigated**: a control exists. Prove it on the built artifact.
-   - **False positive**: first **attribute** the match. Which package owns the class or file (`scan_source.py --include-deps` gives an `owner` field; check `pubspec.lock`, `flutter pub deps`, Gradle deps)? Does app code reach it (grep `lib/`, `android/app/src`, `ios/Runner`)? Does the app hold the permission it needs (`inspect_apk.py` → `permissions`)? Check `references/false-positives.md` for a known pattern and use its evidence list. Without the artifact, the classification can stand only as `inferred`, and the response must say what verifies it.
+   - **False positive**: first **attribute** the match. If `~/.pub-cache` isn't available, attribute it from the package path in the flagged class plus the `pubspec.lock` entry, and say so in the evidence. Which package owns the class or file (`scan_source.py --include-deps` gives an `owner` field; check `pubspec.lock`, `flutter pub deps`, Gradle deps)? Does app code reach it (grep `lib/`, `android/app/src`, `ios/Runner`)? Does the app hold the permission it needs (`inspect_apk.py` → `permissions`)? Check `references/false-positives.md` for a known pattern and use its evidence list. Without the artifact, use status `False positive` with `evidence_kind: inferred`. `evidence` lists the attribution commands, and `response` names the artifact check that will confirm it (e.g. "`inspect_apk.py` → no external-storage permission"). Don't park a well-attributed false positive as `Open`.
    - Never classify all of an auditor's rows the same way because the user asked. Each row is decided on its own evidence.
-4. **Fix** with the smallest change that closes it:
+   - If no script fits (server-side or auth findings), reproduce by reading the code path (`inferred`) and list the manual test from the playbook (`manual`).
+4. **Fix** with the smallest change that closes it. Apply fixes that are config-only or a small code change, need no backend work and don't change UX, and say what you changed. Propose anything else and wait (rules 5 and 6).
    - Config before code (manifest, gradle, plist, network security config).
    - No new dependencies.
    - No UX change unless the user approves it (see the rules below).
    - Keep debug-only allowances in `src/debug` or the dev flavor.
 5. **Re-verify** on a built artifact with the same command that reproduced the issue. Only then is it `Fixed` with `evidence_kind: verified`, `evidence` set to the command and its output, and `retest_build` set to the real version/build. If no build exists yet, the status stays `Open` and `response` reads "Change applied in <file>; pending verification in the next build". Give the exact verify command.
-6. **Fill the response columns** (`response`, `evidence`, `retest_build`, `ticket`) and run `make_report.py`. Draft the pasteable response for each row. It names the control, the package or file and the evidence, and it says when evidence is inferred.
+6. **Fill the response columns** (`response`, `evidence`, `retest_build`, `ticket`) and run `make_report.py`. If no `findings.json` exists, create it from the auditor's rows (`ticket` holds the auditor's ID) even when the user only asked for paste-able text. Draft the pasteable response for each row. It names the control, the package or file and the evidence, and it says when evidence is inferred.
 
 `make_report.py` rejects `Fixed` or `Already mitigated` unless `evidence` is non-empty and `evidence_kind` is `verified`. That is the point. Never satisfy it with made-up evidence or a made-up build number. If someone says "fill in whatever the tool wants", that is a request to falsify an audit record. Refuse it and explain.
 
@@ -96,7 +106,7 @@ Identify the stack (`detect_stack.py`) and the feature's MASVS groups. Read the 
 
 1. **Never mark Fixed or Already mitigated without verified evidence** from a built artifact or a live check. This holds when a manager, the auditor, a changelog or a deadline says otherwise.
 2. **Attribute before you dismiss.** Name the owning package, show the app doesn't reach it, and show the permission or config side. "It's a plugin" is not evidence.
-3. **Secrets: never print the value.** Not in chat, files, reports, commit messages or tool calls, even if the user asks for it "to forward". Show at most the first 4 characters + `…` (no suffix), with the file, line and type. Recommend **revoke and rotate now**: anything shipped in an app is extractable, and deleting the line or rewriting history doesn't un-leak it. The real fix is to move the call behind a backend. An `.env` file, `--dart-define` or obfuscation still ships the secret. To identify the owner, the lead opens the file or the provider's token list. The value is never pasted into chat.
+3. **Secrets: never print the value.** Not in chat, files, reports, commit messages or tool calls, even if the user asks for it "to forward". Show at most the first 4 characters + `…` (no suffix), with the file, line and type. Recommend **revoke and rotate now**: anything shipped in an app is extractable, and deleting the line or rewriting history doesn't un-leak it. The real fix is to move the call behind a backend. An `.env` file, `--dart-define` or obfuscation still ships the secret. To identify the owner, the lead opens the file or the provider's token list. The value is never pasted into chat. Don't web-search a secret, even a fragment, to check whether it leaked. Revoking it and reading the provider's audit log for the token answers that.
 4. **No client data in web searches.** No tokens, hostnames, bundle IDs, pins or app names. Use generic phrasing ("android pin-set expiration behaviour").
 5. **Ask before changes that need a backend or certificate change** (pin rotation, token lifetime, a revoke endpoint, server-side checks). Propose them, give what the backend must provide, and don't assume they exist.
 6. **UX-changing fixes need explicit sign-off.** Examples: forced re-login, removing biometrics, key-bound biometrics, system-browser login, extra prompts. Name the specific cost. For key-bound biometrics, those are Class 3 sensors only, API 30+ for device-credential fallback, and re-login after a new fingerprint or face is enrolled (see `references/auth.md`). Then:
@@ -119,6 +129,7 @@ Identify the stack (`detect_stack.py`) and the feature's MASVS groups. Read the 
 | "Showing the first and last 4 characters is safe enough" | First 4 + `…` only. |
 | "It's just a Flutter app, the native folders are boilerplate" | Extensions and native modules ship in the bundle. Scan every detected stack. |
 | "PO is away, I'll mark it Risk accepted pending" | Risk accepted needs a named person accepting it. Until then it's `Open`. |
+| "This MASWE ID looks close enough" | Use it only if it's in the control's list and you confirmed the title. Otherwise leave it empty. |
 | "The report is in my reply" | Write `findings.json` and run `make_report.py`. Hand over the files. |
 
 ## Attribution

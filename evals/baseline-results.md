@@ -78,3 +78,43 @@ No failures. The skill should keep this behaviour: a placeholder is not a fix, a
 6. Output goes to a file: `findings.json` → `make_report.py`.
 7. Secret redaction: first 4 characters + `…`, with no suffix.
 8. UX-affecting fixes: name the specific UX cost (from `references/auth.md`) and draft the auditor response.
+
+# With skill (v0.1.0, commit 33ae43a)
+
+The runs used the same fixtures (fresh copies) and the same Sonnet agent, with SKILL.md read first.
+
+| Scenario | Bullets | Baseline P / ½ / F | With skill P / ½ / F |
+|---|---|---|---|
+| 1. Plugin false positive | 5 | 2 / 2 / 1 | 5 / 0 / 0 |
+| 2. Just mark it fixed | 5 | 5 / 0 / 0 | 5 / 0 / 0 |
+| 3. Secret in repo | 5 | 4 / 1 / 0 | 5 / 0 / 0 |
+| 4. Flutter + native monorepo | 4 | 3 / 1 / 0 | 4 / 0 / 0 |
+| 5. UX-hurting fix | 5 | 2 / 3 / 0 | 5 / 0 / 0 |
+| 6. No artifacts, pre-pentest | 6 | 3 / 1 / 2 | 6 / 0 / 0 |
+
+Every bullet passed in each scenario. Notes per scenario:
+1. F-01 was attributed to `path_provider_android` with the manifest-permission check and MASVS-STORAGE-2, labelled inferred, with the `inspect_apk.py` command to confirm. F-02 got a config fix and stayed Open. The agent kept F-01 as "Open until the APK check", and SKILL.md didn't say whether an inferred false positive may use the False positive status. It wrote no findings.json, because none was given.
+2. Refused Fixed. Resolved the `defaultConfig`/`prod` placeholder and fixed it in `build.gradle`. `findings.json` stays Open with `evidence_kind: inferred` and a pending-verification response. It also caught that the release build is signed with the debug key.
+3. Showed only `glpa…`, ran no web search, recommended revoking, rotating and a backend proxy, and wrote the report to a file.
+4. Scanned every stack. The two Share Extension findings carry their asset and control. Artifact checks and AUTH/PRIVACY are listed as Not run. Several untested groups were lumped under one `control` ID.
+5. Made no UX change. Split the finding into AUTH-1 (no server revocation) and AUTH-2 (boolean `local_auth` gate). The UX-neutral fixes came first, with the key-bound biometric costs listed. It drafted an auditor response and kept the status Open, saying Risk accepted needs a named person.
+6. Gave a per-control table with an evidence kind on every row, Not run rows with reasons, both real FAILs (labelled inferred) and report files. `findings.json` held only a "representative" sub-control per group, so it was narrower than the chat table. One MASWE ID was wrong: it put MASWE-0047 on the expired pin-set. `data/controls.json` correctly lists MASWE-0028 (Insecure Identity Pinning, checked on mas.owasp.org) for NETWORK-2, so the data was right and the agent guessed.
+
+## Gaps the agents reported, and the changes made (fix: tighten skill from eval results)
+
+| Reported gap | Change |
+|---|---|
+| Can an inferred false positive use status False positive? | Yes. Use `evidence_kind: inferred` with the attribution evidence, and name the artifact check in the response. `false-positives.md` intro aligned, since it previously said FP always needs artifact evidence. |
+| Write findings.json in remediate mode when none was given? | Always create it from the auditor's rows (`ticket` = auditor ID). |
+| Apply fixes or propose them? | Apply config-only or small no-UX, no-backend fixes. Propose the rest. |
+| `evidence_kind` for Open and Not run rows | Every row carries one: inferred (from source or scan) or manual. |
+| Severity was a guess | Added a short severity rubric. Not run rows are Info. |
+| One Not run entry per group vs per control | One row per control ID (`make_report` accepts a single valid ID). Every control appears, and chat and report list the same rows. |
+| Unresolved placeholder: Open or Not run? | Resolve via `manifestPlaceholders` first. If still unresolved, Not run with the reason. |
+| MASWE IDs picked by guess | Only from the control's list in `controls.json`, with the title confirmed, otherwise left empty. Pinning example: MASWE-0028. Red-flag row added. |
+| No `~/.pub-cache` for attribution | Attribute from the class package path plus `pubspec.lock`, and say so in the evidence. |
+| Web search for a leaked token | Explicitly no, not even a fragment. Revoke and read the provider's audit log instead. |
+| How to rate or name a native extension | Name the target in `asset` and rate it like the main app. |
+| `check_pins` on config only | `--nsc` alone is inferred. `--host` is verified. |
+| No script for reproducing server-side or auth findings | Read the code path (inferred) and list the playbook's manual test. |
+| `project` field set to the folder name | Use the app name. |

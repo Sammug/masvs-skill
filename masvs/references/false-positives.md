@@ -1,6 +1,6 @@
 # Common false positives
 
-Use these only after reproducing the finding against the build the auditor tested. "False positive" and "already mitigated" both need evidence from the built artifact (APK/IPA), not just source. If the evidence doesn't hold, it's a real finding: fix it.
+Use these only after reproducing the finding against the build the auditor tested. "Already mitigated" needs verified evidence from the built artifact (APK/IPA). A "false positive" without the artifact can stand only as `inferred`: give the source evidence and name the artifact check that confirms it. If the evidence doesn't hold, it's a real finding: fix it.
 
 Commands assume you run from the skill directory (`scripts/...`) with `python3`. Paths like `<app>` and `app.apk` are placeholders.
 
