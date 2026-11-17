@@ -4,7 +4,7 @@ from pathlib import Path
 
 import pytest
 
-SCRIPTS = sorted((Path(__file__).resolve().parent.parent / "masvs" / "scripts").glob("*.py"))
+SCRIPTS = sorted((Path(__file__).resolve().parent.parent / "skills" / "masvs" / "scripts").glob("*.py"))
 PY39 = Path("/usr/bin/python3")
 
 

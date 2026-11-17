@@ -4,7 +4,7 @@ import json
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
-DATA = ROOT / "masvs" / "data" / "controls.json"
+DATA = ROOT / "skills" / "masvs" / "data" / "controls.json"
 
 
 def render(controls):

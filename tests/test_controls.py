@@ -6,8 +6,8 @@ from collections import Counter
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
-CONTROLS = ROOT / "masvs" / "data" / "controls.json"
-CONTROLS_MD = ROOT / "masvs" / "references" / "controls.md"
+CONTROLS = ROOT / "skills" / "masvs" / "data" / "controls.json"
+CONTROLS_MD = ROOT / "skills" / "masvs" / "references" / "controls.md"
 GEN = ROOT / "tools" / "gen_controls_md.py"
 
 # Per-group control counts from https://mas.owasp.org/MASVS/ (fetched 2026-11-17).

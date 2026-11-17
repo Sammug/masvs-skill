@@ -5,7 +5,7 @@ import zipfile
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
-SKILL = ROOT / "masvs" / "SKILL.md"
+SKILL = ROOT / "skills" / "masvs" / "SKILL.md"
 
 
 def _frontmatter(text):
@@ -41,7 +41,7 @@ def _git(cwd, *args):
 
 def _repo_copy(tmp_path):
     repo = tmp_path / "repo"
-    shutil.copytree(ROOT / "masvs", repo / "masvs", ignore=shutil.ignore_patterns("__pycache__"))
+    shutil.copytree(ROOT / "skills" / "masvs", repo / "skills" / "masvs", ignore=shutil.ignore_patterns("__pycache__"))
     (repo / "scripts").mkdir()
     shutil.copy(ROOT / "scripts" / "package.sh", repo / "scripts" / "package.sh")
     _git(repo, "init", "-q")
@@ -71,7 +71,7 @@ def test_package_zip(tmp_path):
 
 def test_package_refuses_dirty_masvs(tmp_path):
     repo = _repo_copy(tmp_path)
-    (repo / "masvs" / "SKILL.md").write_text((repo / "masvs" / "SKILL.md").read_text() + "\nedit\n")
+    (repo / "skills" / "masvs" / "SKILL.md").write_text((repo / "skills" / "masvs" / "SKILL.md").read_text() + "\nedit\n")
     r = _package(repo)
     assert r.returncode != 0
     assert "uncommitted" in r.stderr
@@ -79,3 +79,14 @@ def test_package_refuses_dirty_masvs(tmp_path):
     _git(repo, "add", "-A")
     _git(repo, "commit", "-q", "-m", "edit")
     assert _package(repo).returncode == 0
+
+
+def test_plugin_versions_agree():
+    import json
+    plugin = json.loads((ROOT / ".claude-plugin" / "plugin.json").read_text())
+    market = json.loads((ROOT / ".claude-plugin" / "marketplace.json").read_text())
+    skill_version = _top_level_meta_version(_frontmatter(SKILL.read_text()))
+    entry = next(p for p in market["plugins"] if p["name"] == plugin["name"])
+    assert plugin["version"] == entry["version"] == skill_version
+    assert entry["source"] == "./"
+    assert (ROOT / "skills" / plugin["name"] / "SKILL.md").exists()

@@ -1,6 +1,6 @@
 # masvs
 
-A Claude Code skill for OWASP MASVS mobile security audits, pentest/VAPT prep and remediation of findings. It covers Flutter, native Android (Kotlin/Java), native iOS (Swift/ObjC) and React Native apps. Only the `masvs/` folder is shipped.
+A Claude Code plugin for OWASP MASVS mobile security audits, pentest/VAPT prep and remediation of findings. It covers Flutter, native Android (Kotlin/Java), native iOS (Swift/ObjC) and React Native apps.
 
 ## What it does
 
@@ -12,17 +12,37 @@ A Claude Code skill for OWASP MASVS mobile security audits, pentest/VAPT prep an
 
 ## Install
 
-Personal (works in every project):
+In Claude Code, run:
 
-```bash
-unzip masvs-0.1.0.zip -d ~/.claude/skills/
+```
+/plugin install masvs --marketplace Sammug/masvs-skill
 ```
 
-This gives `~/.claude/skills/masvs/SKILL.md`.
+On Claude Code versions before 2.1.275, use two commands instead:
 
-Per app (everyone who clones the repo gets it): unzip into `<app>/.claude/skills/` and commit the `masvs/` folder.
+```
+/plugin marketplace add Sammug/masvs-skill
+/plugin install masvs@masvs-skill
+```
 
-Org-wide (optional): upload the zip as a claude.ai organization skill, if your organization allows it.
+Restart Claude Code (or start a new session) after installing.
+
+**For a whole team:** commit this to an app's `.claude/settings.json`, and anyone who opens the repo in Claude Code is prompted to install the plugin:
+
+```json
+{
+  "extraKnownMarketplaces": {
+    "masvs-skill": { "source": { "source": "github", "repo": "Sammug/masvs-skill" } }
+  },
+  "enabledPlugins": { "masvs@masvs-skill": true }
+}
+```
+
+**Without plugins:** download `masvs-<version>.zip` from [Releases](https://github.com/Sammug/masvs-skill/releases) and unzip it into `~/.claude/skills/` (every project) or `<app>/.claude/skills/` (one app).
+
+## Use
+
+Ask in plain words, for example "run a MASVS audit of this app", or invoke it directly with `/masvs:masvs audit`. Reports go to `<app>/.masvs/` (add it to `.gitignore`).
 
 ## Requirements
 
@@ -49,11 +69,11 @@ An excerpt of `report.md` (fake data):
 
 Every status carries an evidence kind: `verified` (a script or command on a built artifact or live endpoint showed it), `inferred` (source, config or a scan showed it) or `manual` (nothing has exercised it yet).
 `Fixed` and `Already mitigated` are only accepted with verified evidence; scan-only results stay `Open` or `Not run`.
-The pass/fail mapping, severity scale and statuses are defined once in `masvs/SKILL.md`.
+The pass/fail mapping, severity scale and statuses are defined once in `skills/masvs/SKILL.md`.
 
 ## Updating
 
-Replace the `masvs/` folder with the new one from the zip. The version is in the `metadata.version` field of the `masvs/SKILL.md` frontmatter.
+Plugin: run `/plugin marketplace update masvs-skill`, then restart Claude Code. Zip install: replace the `masvs/` folder with the one from the newer zip. The version is in `.claude-plugin/plugin.json` and in `metadata.version` in `skills/masvs/SKILL.md`.
 
 ## Tests and evals
 

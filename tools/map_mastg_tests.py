@@ -10,7 +10,7 @@ import re
 import sys
 from pathlib import Path
 
-DATA = Path(__file__).resolve().parent.parent / "masvs" / "data" / "controls.json"
+DATA = Path(__file__).resolve().parent.parent / "skills" / "masvs" / "data" / "controls.json"
 
 
 def frontmatter(path):

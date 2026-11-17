@@ -4,7 +4,7 @@ import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
-SCRIPTS = ROOT / "masvs" / "scripts"
+SCRIPTS = ROOT / "skills" / "masvs" / "scripts"
 FIX = ROOT / "tests" / "fixtures" / "stacks"
 sys.path.insert(0, str(SCRIPTS))
 

@@ -7,7 +7,7 @@ from pathlib import Path
 import pytest
 
 ROOT = Path(__file__).resolve().parent.parent
-SCRIPTS = ROOT / "masvs" / "scripts"
+SCRIPTS = ROOT / "skills" / "masvs" / "scripts"
 sys.path.insert(0, str(SCRIPTS))
 
 import check_pins  # noqa: E402

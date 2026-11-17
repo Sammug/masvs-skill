@@ -1,0 +1,15 @@
+{
+  "name": "masvs-skill",
+  "description": "Claude Code plugin for OWASP MASVS mobile security audits and pentest remediation.",
+  "owner": {
+    "name": "Sammug"
+  },
+  "plugins": [
+    {
+      "name": "masvs",
+      "source": "./",
+      "description": "OWASP MASVS mobile security audits and pentest remediation for Flutter, Android, iOS and React Native apps.",
+      "version": "0.2.0"
+    }
+  ]
+}

@@ -8,8 +8,8 @@ from pathlib import Path
 import pytest
 
 ROOT = Path(__file__).resolve().parent.parent
-SCRIPTS = ROOT / "masvs" / "scripts"
-DATA = ROOT / "masvs" / "data"
+SCRIPTS = ROOT / "skills" / "masvs" / "scripts"
+DATA = ROOT / "skills" / "masvs" / "data"
 FIX = ROOT / "tests" / "fixtures" / "scan"
 sys.path.insert(0, str(SCRIPTS))
 

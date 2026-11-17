@@ -6,7 +6,7 @@ from pathlib import Path
 import pytest
 
 ROOT = Path(__file__).resolve().parent.parent
-SKILL = ROOT / "masvs"
+SKILL = ROOT / "skills" / "masvs"
 REFS = SKILL / "references"
 GROUPS = ["storage", "crypto", "auth", "network", "platform", "code", "resilience", "privacy"]
 SECTIONS = [
