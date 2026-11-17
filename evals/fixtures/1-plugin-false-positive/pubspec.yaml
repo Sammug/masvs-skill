@@ -1,0 +1,11 @@
+name: example_app
+description: Example App
+version: 1.4.0+42
+environment:
+  sdk: ">=3.3.0 <4.0.0"
+dependencies:
+  flutter:
+    sdk: flutter
+  cached_network_image: ^3.3.1
+flutter:
+  uses-material-design: true

@@ -1,0 +1,19 @@
+{
+  "project": "Example App",
+  "assets": ["example_app-prod-release.apk (1.4.0)"],
+  "findings": [
+    {
+      "title": "Cleartext HTTP traffic permitted",
+      "control": "MASVS-NETWORK-1",
+      "asset": "example_app-prod-release.apk (1.4.0)",
+      "observation": "android:usesCleartextTraffic=\"true\" in the merged manifest.",
+      "impact": "Traffic can be read or modified by a network attacker.",
+      "severity": "High",
+      "recommendation": "Disable cleartext traffic for release builds.",
+      "status": "Open",
+      "response": "",
+      "evidence": "",
+      "ticket": "F-03"
+    }
+  ]
+}

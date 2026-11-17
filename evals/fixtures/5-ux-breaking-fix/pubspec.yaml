@@ -1,0 +1,12 @@
+name: example_app
+description: Example App
+version: 1.9.0+30
+environment:
+  sdk: ">=3.3.0 <4.0.0"
+dependencies:
+  flutter:
+    sdk: flutter
+  flutter_secure_storage: ^9.2.2
+  local_auth: ^2.2.0
+flutter:
+  uses-material-design: true

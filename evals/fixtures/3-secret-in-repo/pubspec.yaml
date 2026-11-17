@@ -1,0 +1,11 @@
+name: example_app
+description: Example App
+version: 2.0.0+7
+environment:
+  sdk: ">=3.3.0 <4.0.0"
+dependencies:
+  flutter:
+    sdk: flutter
+  http: ^1.2.0
+flutter:
+  uses-material-design: true
