@@ -1,0 +1,36 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "type": "object",
+  "required": ["project", "assets", "findings"],
+  "properties": {
+    "project": {"type": "string"},
+    "assets": {"type": "array", "items": {"type": "string"}},
+    "generated": {"type": "string"},
+    "findings": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["title", "control", "asset", "observation", "severity", "status"],
+        "properties": {
+          "title": {"type": "string"},
+          "control": {"type": "string"},
+          "maswe": {"type": ["string", "array"], "items": {"type": "string"}},
+          "asset": {"type": "string"},
+          "observation": {"type": "string"},
+          "impact": {"type": "string"},
+          "severity": {"type": "string", "enum": ["Critical", "High", "Medium", "Low", "Info"]},
+          "recommendation": {"type": "string"},
+          "status": {
+            "type": "string",
+            "enum": ["Open", "Fixed", "Already mitigated", "False positive", "Risk accepted", "Not run"]
+          },
+          "response": {"type": "string"},
+          "evidence": {"type": "string"},
+          "evidence_kind": {"type": "string", "enum": ["verified", "inferred", "manual"]},
+          "retest_build": {"type": "string"},
+          "ticket": {"type": "string"}
+        }
+      }
+    }
+  }
+}
