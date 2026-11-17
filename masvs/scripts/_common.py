@@ -9,7 +9,7 @@ DEP_DIRS: frozenset[str] = frozenset({"node_modules", "Pods", "vendor", ".pub-ca
 
 
 def walk(root: Path, include_deps: bool = False) -> Iterator[Path]:
-    pruned = IGNORE_DIRS - DEP_DIRS if include_deps else IGNORE_DIRS
+    pruned = IGNORE_DIRS - DEP_DIRS if include_deps else IGNORE_DIRS | DEP_DIRS
     for dirpath, dirnames, filenames in os.walk(root):
         dirnames[:] = sorted(d for d in dirnames if d not in pruned)
         for name in sorted(filenames):

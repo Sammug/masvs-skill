@@ -125,3 +125,12 @@ def test_constants():
     assert _common.IGNORE_DIRS == frozenset(
         {"build", ".dart_tool", "node_modules", "Pods", ".gradle", "DerivedData", ".git", "vendor"})
     assert _common.DEP_DIRS == frozenset({"node_modules", "Pods", "vendor", ".pub-cache"})
+
+
+def test_walk_pub_cache(tmp_path):
+    p = tmp_path / ".pub-cache" / "x" / "AndroidManifest.xml"
+    p.parent.mkdir(parents=True)
+    p.write_text("")
+    assert rel(tmp_path, _common.walk(tmp_path)) == []
+    assert rel(tmp_path, _common.walk(tmp_path, include_deps=True)) == [
+        ".pub-cache/x/AndroidManifest.xml"]
