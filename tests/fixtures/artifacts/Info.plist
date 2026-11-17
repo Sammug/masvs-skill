@@ -1,0 +1,1 @@
+{"CFBundleIdentifier":"com.example.app","CFBundleName":"Example","NSAppTransportSecurity":{"NSAllowsArbitraryLoads":false,"NSExceptionDomains":{"example.invalid":{"NSExceptionAllowsInsecureHTTPLoads":true}}}}

@@ -1,0 +1,7 @@
+Frameworks/App.framework/App (architecture arm64):
+Indirect symbols for (__TEXT,__stubs) 4 entries
+address            index name
+0x000000000000e800     1 _abort
+0x000000000000e80c     2 _dlsym
+0x000000000000e818     3 _memcpy
+0x000000000000e824     4 _kDartVmSnapshotData

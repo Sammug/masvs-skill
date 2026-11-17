@@ -1,0 +1,132 @@
+import json
+import subprocess
+import sys
+from pathlib import Path
+
+ROOT = Path(__file__).resolve().parent.parent
+SCRIPTS = ROOT / "masvs" / "scripts"
+FIX = ROOT / "tests" / "fixtures" / "artifacts"
+sys.path.insert(0, str(SCRIPTS))
+
+import inspect_apk  # noqa: E402
+import inspect_ipa  # noqa: E402
+
+
+def fx(name):
+    return (FIX / name).read_text()
+
+
+def run_cli(script, arg, env):
+    return subprocess.run(
+        [sys.executable, str(SCRIPTS / script), str(arg)],
+        capture_output=True, text=True, env=env,
+    )
+
+
+def test_parse_badging_sdks():
+    b = inspect_apk.parse_badging(fx("aapt_badging.txt"))
+    assert b["min_sdk"] == 29
+    assert b["target_sdk"] == 36
+    assert "android.permission.INTERNET" in b["permissions"]
+    assert b["permissions"].count("android.permission.CAMERA") == 1
+
+
+def test_parse_xmltree_backup_false():
+    m = inspect_apk.parse_xmltree(fx("aapt_xmltree.txt"))
+    assert m["allow_backup"] is False
+    assert m["debuggable"] is False
+    assert m["uses_cleartext"] is None
+    assert m["network_security_config"] == "@0x7f110005"
+    assert m["target_sdk"] == 36
+
+
+def test_exported_without_permission_listed():
+    m = inspect_apk.parse_xmltree(fx("aapt_xmltree.txt"))
+    by_name = {e["name"]: e["permission"] for e in m["exported"]}
+    assert by_name["com.example.app.MainActivity"] is None
+    assert by_name["com.example.app.SyncService"] == "com.example.app.SYNC"
+    assert "com.example.app.ScannerActivity" not in by_name
+    assert "com.example.app.FileProvider" not in by_name
+
+
+def test_intent_filter_implies_export_below_api_31():
+    text = fx("aapt_xmltree.txt")
+    old = inspect_apk.parse_xmltree(text.replace("targetSdkVersion(0x01010270)=36", "targetSdkVersion(0x01010270)=30"))
+    assert "com.example.app.BootReceiver" in {e["name"] for e in old["exported"]}
+    new = inspect_apk.parse_xmltree(text)
+    assert "com.example.app.BootReceiver" not in {e["name"] for e in new["exported"]}
+
+
+def test_debuggable_true_detected():
+    text = fx("aapt_xmltree.txt").replace(
+        "        A: http://schemas.android.com/apk/res/android:allowBackup(0x01010280)=false",
+        "        A: http://schemas.android.com/apk/res/android:debuggable(0x0101000f)=true\n"
+        "        A: http://schemas.android.com/apk/res/android:allowBackup(0x01010280)=true\n"
+        "        A: http://schemas.android.com/apk/res/android:usesCleartextTraffic(0x010104ec)=true",
+    )
+    m = inspect_apk.parse_xmltree(text)
+    assert m["debuggable"] is True
+    assert m["allow_backup"] is True
+    assert m["uses_cleartext"] is True
+
+
+def test_otool_canary_present():
+    r = inspect_ipa.parse_otool_imports(fx("otool_Iv_runner.txt"), "Runner")
+    assert r["stack_canary"] is True
+    assert r["arc"] is True
+    assert r["kind"] == "objc-swift"
+
+
+def test_otool_canary_absent_pure_swift():
+    r = inspect_ipa.parse_otool_imports("0x1 1 _swift_allocObject\n0x2 2 _swift_release\n", "Lib")
+    assert r["stack_canary"] is False
+    assert r["kind"] == "objc-swift"
+    assert "pure Swift" in r["note"]
+
+
+def test_app_framework_dart_aot():
+    r = inspect_ipa.parse_otool_imports(fx("otool_Iv_appframework.txt"), "App")
+    assert r["kind"] == "dart-aot"
+    assert r["arc"] is None
+    assert "n/a" in r["note"]
+
+
+def test_plain_c_binary():
+    r = inspect_ipa.parse_otool_imports("0x1 1 _malloc\n0x2 2 ___stack_chk_fail\n", "libfoo")
+    assert r["kind"] == "c"
+    assert r["stack_canary"] is True
+    assert r["arc"] is None
+
+
+def test_pie_from_header():
+    assert inspect_ipa.parse_otool_header(fx("otool_hv.txt"))["pie"] is True
+    assert inspect_ipa.parse_otool_header(fx("otool_hv_nopie.txt"))["pie"] is False
+    assert inspect_ipa.parse_otool_header(fx("otool_hv_dylib.txt"))["pie"] is True
+
+
+def test_ats_extraction():
+    info = json.loads(fx("Info.plist"))
+    assert inspect_ipa.ats_from_info(info)["NSAllowsArbitraryLoads"] is False
+    assert inspect_ipa.ats_from_info({}) == {}
+
+
+def test_missing_tool_skips(tmp_path, monkeypatch):
+    f = tmp_path / "x.apk"
+    f.write_bytes(b"PK")
+    env = {"PATH": "", "HOME": str(tmp_path)}
+    r = run_cli("inspect_apk.py", f, env)
+    assert r.returncode == 0
+    assert "skipped" in json.loads(r.stdout)
+    g = tmp_path / "x.ipa"
+    g.write_bytes(b"PK")
+    r = run_cli("inspect_ipa.py", g, env)
+    assert r.returncode == 0
+    assert "skipped" in json.loads(r.stdout)
+
+
+def test_bad_path_exits_2(tmp_path):
+    env = {"PATH": "", "HOME": str(tmp_path)}
+    for script in ("inspect_apk.py", "inspect_ipa.py"):
+        r = run_cli(script, tmp_path / "nope", env)
+        assert r.returncode == 2
+        assert "error" in json.loads(r.stdout)

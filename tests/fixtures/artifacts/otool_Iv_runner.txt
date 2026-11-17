@@ -1,0 +1,12 @@
+Runner:
+Indirect symbols for (__TEXT,__stubs) 5 entries
+address            index name
+0x0000000100013218    18 _$s10Foundation21_BridgedStoredNSErrorPAAE012_getEmbeddedD0yXlSgyF
+0x0000000100013668   241 ___stack_chk_fail
+0x0000000100013698   268 __swift_stdlib_operatingSystemVersion
+0x0000000100013794   291 _objc_release
+0x000000010001380c   301 _swift_allocObject
+Indirect symbols for (__DATA_CONST,__got) 2 entries
+address            index name
+0x0000000100024000   400 ___stack_chk_guard
+0x0000000100024008   401 _objc_retain
