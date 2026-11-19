@@ -1,33 +1,81 @@
 # masvs
 
-A Claude Code plugin for OWASP MASVS mobile security audits, pentest/VAPT prep and remediation of findings. Every finding is mapped to a MASVS control (what to achieve) and an OWASP MASWE weakness (what went wrong). It covers Flutter, native Android (Kotlin/Java), native iOS (Swift/ObjC) and React Native apps.
+A Claude Code plugin for OWASP MASVS mobile security audits, pentest/VAPT prep and remediation of auditor findings, for Flutter, native Android, native iOS and React Native apps.
 
-## What it does
+[![Code: Apache-2.0](https://img.shields.io/badge/code-Apache--2.0-blue.svg)](LICENSE)
+[![Content: CC BY-SA 4.0](https://img.shields.io/badge/content-CC%20BY--SA%204.0-lightgrey.svg)](NOTICE)
+[![MASVS v2.1.0](https://img.shields.io/badge/OWASP%20MASVS-v2.1.0-orange.svg)](https://mas.owasp.org/MASVS/)
+[![MASWE v1.0.0](https://img.shields.io/badge/OWASP%20MASWE-v1.0.0-orange.svg)](https://mas.owasp.org/MASWE/)
+[![Python 3.9+](https://img.shields.io/badge/python-3.9%2B-3776AB.svg)](https://www.python.org/)
 
-| Mode | Use it to | Example prompt |
+Every finding is filed under a MASVS control (what the app must achieve) and an OWASP MASWE weakness (what went wrong), with the evidence behind its status.
+
+## Why use it
+
+- **Evidence first.** Every status records how it was established: `verified`, `inferred` or `manual`. `Fixed` and `Already mitigated` are only accepted with verified evidence from a built APK/IPA or a live endpoint, so the report won't claim a fix the pentester can break on retest.
+- **Checks the whole bundle.** Pentesters test what ships. The skill audits native Android and iOS code, app extensions and widgets inside a Flutter or React Native repo, not only the Dart or JavaScript.
+- **Output auditors can use.** It writes `findings.json`, a Markdown report and an Excel sheet (or CSV) whose columns match a typical VAPT findings sheet: observation, impact, severity, status, response, evidence, re-test build, ticket, MASVS control and MASWE weakness.
+- **Safe by default.** The scripts run locally, use only the Python standard library and make no network calls, except `check_pins.py --host`, which connects to the host you name. Known token formats and long literals are redacted in every output.
+
+## Modes
+
+| Mode | When to use it | Example prompt |
 |---|---|---|
-| `audit` | Scan the source and any APK/IPA, then write `findings.json`, a Markdown report and an optional .xlsx | "Audit this app for MASVS before the pentest" |
-| `remediate` | Take an auditor's findings, map each to a MASVS control and MASWE weakness, classify it (fix, already mitigated, false positive), apply fixes and fill in the response columns | "Here is the VAPT sheet, respond to each finding and fix what's real" |
-| `checklist` | Get a short per-feature checklist, one item per MASWE weakness, while coding | "I'm adding biometric login on Flutter, what MASVS/MASWE checks apply?" |
+| `audit` | No findings yet: before a pentest, before a release, or to see where you stand | "Run a MASVS audit of this app before the pentest" |
+| `remediate` | You have an auditor's report, findings sheet or security tickets | "Here is the VAPT sheet. Map each finding to MASVS and MASWE, fix what's real and fill in the response column" |
+| `checklist` | You are building a feature and want to get it right first time | "I'm adding biometric login on Flutter. What MASVS/MASWE checks apply?" |
 
-## Install
+## Quick start
 
-In Claude Code, run:
+1. Install the plugin in Claude Code (other options are under [Installation](#installation)):
 
-```
-/plugin install masvs --marketplace Sammug/masvs-skill
-```
+   ```text
+   /plugin install masvs --marketplace Sammug/masvs-skill
+   ```
 
-On Claude Code versions before 2.1.275, use two commands instead:
+2. Open your app's repo in Claude Code and ask:
 
-```
-/plugin marketplace add Sammug/masvs-skill
-/plugin install masvs@masvs-skill
-```
+   ```text
+   Run a MASVS audit of this app. The release APK is at build/app/outputs/flutter-apk/app-release.apk.
+   Write the report and an xlsx.
+   ```
 
-Restart Claude Code (or start a new session) after installing.
+3. Collect the output from `<app>/.masvs/`:
 
-**For a whole team:** commit this to an app's `.claude/settings.json`, and anyone who opens the repo in Claude Code is prompted to install the plugin:
+   ```text
+   <app>/.masvs/
+   ├── findings.json   # one row per finding and per remaining MASVS control
+   ├── report.md       # summary by severity and status, then the findings table
+   └── report.xlsx     # or report.csv when openpyxl isn't installed
+   ```
+
+> [!IMPORTANT]
+> Add `.masvs/` to your app's `.gitignore`. The report holds security findings and should not be committed.
+
+### Example output
+
+An excerpt of `report.md` for a synthetic app. The full example is in [docs/examples/report.example.md](docs/examples/report.example.md), rendered from [docs/examples/findings.example.json](docs/examples/findings.example.json).
+
+| Finding | MASVS Control | MASWE | Severity | Status | Evidence |
+|---|---|---|---|---|---|
+| Backups enabled | MASVS-STORAGE-2 | MASWE-0006 (Sensitive Data Not Excluded From Backup) | Medium | Open | [verified] inspect_apk.py app-release.apk: allow_backup: true |
+| Cleartext only in debug config | MASVS-NETWORK-1 | MASWE-0026 (Network Traffic Not Encrypted) | Info | False positive | [inferred] git ls-files android/app/src: the only usesCleartextTraffic="true" is in src/debug/AndroidManifest.xml; src/main/AndroidManifest.xml has no override |
+| Certificate pins expired | MASVS-NETWORK-2 | MASWE-0028 (Insecure Identity Pinning) | Medium | Open | [inferred] check_pins.py --nsc network_security_config.xml --today 2026-11-19: expiration 2025-06-30, days_left -507, backup_pin true |
+| Exported service without permission | MASVS-PLATFORM-1 | MASWE-0018 (Lack of Authentication or Authorization on App Components) | High | Fixed | [verified] inspect_apk.py app-release-4.2.1.apk: exported[] no longer lists com.example.wallet.sync.SyncService |
+| Root/jailbreak detection | MASVS-RESILIENCE-1 | MASWE-0051 (Root/Jailbreak Detection Not Implemented) | Info | Not run | [manual] no rooted/jailbroken test device: runtime check not run |
+| Binary protections (iOS) | MASVS-CODE-3 | MASWE-0045 (Compiler-Provided Security Features Not Used) | Info | Not run | [manual] no APK/IPA: inspect_ipa.py not run |
+
+## Installation
+
+| Method | Commands | Notes |
+|---|---|---|
+| In a Claude Code session (2.1.275 or later) | `/plugin install masvs --marketplace Sammug/masvs-skill` | One command adds the marketplace and installs the plugin. |
+| In a Claude Code session (older versions) | `/plugin marketplace add Sammug/masvs-skill`<br>`/plugin install masvs@masvs-skill` | Same result in two steps. |
+| From a shell | `claude plugin marketplace add Sammug/masvs-skill`<br>`claude plugin install masvs@masvs-skill --scope project` | `--scope project` records the plugin in the repo's settings for everyone on it; leave it out to install for yourself only. |
+| For a whole team | Commit the snippet below to the app's `.claude/settings.json` | Anyone who opens the repo in Claude Code is prompted to install the plugin. |
+| Without plugins | Download `masvs-<version>.zip` from [Releases](https://github.com/Sammug/masvs-skill/releases) and unzip it into `~/.claude/skills/` (every project) or `<app>/.claude/skills/` (one app) | A plain skill: invoke it as `/masvs`. |
+
+Team settings snippet:
 
 ```json
 {
@@ -38,101 +86,105 @@ Restart Claude Code (or start a new session) after installing.
 }
 ```
 
-**Without plugins:** download `masvs-<version>.zip` from [Releases](https://github.com/Sammug/masvs-skill/releases) and unzip it into `~/.claude/skills/` (every project) or `<app>/.claude/skills/` (one app).
+An install from inside a session is either active straight away or asks you to run `/reload-plugins`. A shell install loads the next time Claude Code starts, or after `/reload-plugins` in a running session.
 
-## Use
+### Invoking it
 
-Open your app's repo in Claude Code and ask in plain words. Claude picks the skill up on its own when you mention MASVS, MASWE, a pentest, VAPT or a security audit. To call it directly, type `/masvs:masvs` followed by your request (plain `/masvs` won't find it, because plugin skills are namespaced).
+Ask in plain language. Claude loads the skill on its own when you mention MASVS, MASWE, a pentest, VAPT, a mobile security audit or an auditor's findings. To call it directly, type `/masvs:masvs` followed by your request (plugin skills are namespaced). With a zip install, the command is `/masvs`.
 
-Reports go to `<app>/.masvs/`. Add that folder to `.gitignore`, because it holds security findings.
+More prompts and every way to run the skill, including headless and CI, are in [docs/USAGE.md](docs/USAGE.md).
 
-### Prompts that work well
+## How an audit works
 
-Good prompts say three things: **the mode** (audit, remediate or checklist), **what to look at** (the repo, a built APK/IPA, the auditor's sheet) and **what you want back** (a report, fixes, responses).
-
-**Audit before a pentest**
-
-```
-Run a MASVS audit of this app. The release APK is at build/app/outputs/flutter-apk/app-release.apk
-and the IPA is at build/ios/ipa/MyApp.ipa. Write the report and an xlsx.
-```
-
-```
-/masvs:masvs audit — Android only, no build yet. Tell me what can't be checked without an APK.
-```
-
-**Respond to an auditor's findings**
-
-```
-Here is the VAPT report: docs/security/vapt-round1.xlsx. For each finding, map it to a MASVS control
-and MASWE weakness, decide fix / already mitigated / false positive with evidence, fix what is real,
-and fill in the response columns.
+```mermaid
+flowchart TD
+    A[detect_stack.py<br>stacks, manifests, plists] --> B[scan_source.py<br>rule matches]
+    B --> C{APK or IPA given?}
+    C -- yes --> D[inspect_apk.py / inspect_ipa.py<br>merged manifest, ATS, binary flags]
+    C -- no --> E[Build-only checks<br>recorded as Not run]
+    D --> F[check_pins.py<br>per network security config]
+    E --> F
+    F --> G[Read the playbooks<br>for the groups hit]
+    G --> H[findings.json<br>severity, status, evidence]
+    H --> I[make_report.py<br>report.md + .xlsx/.csv]
 ```
 
-```
-The pentester says "Weak Cryptographic Implementation: AES-CBC with PKCS7 padding". Which MASWE
-weakness is this, is it real in our code or in a plugin, and what should we reply?
-```
+Scanner output is **matches, not findings**. Claude reads the playbook for each MASVS group that was hit, confirms or dismisses each match, assigns severity and status, and adds a row for every MASVS control that has no finding, so the report covers all 24 controls.
 
-**Checklist while building a feature**
+## Evidence model
 
-```
-I'm adding biometric login on Flutter. Give me the MASVS/MASWE checklist for Android and iOS,
-with the fix pattern and the test to show an auditor.
-```
+| Evidence kind | Meaning | Examples |
+|---|---|---|
+| `verified` | A script or command run on a built artifact or a live endpoint showed it | `inspect_apk.py`, `inspect_ipa.py`, `check_pins.py --host` |
+| `inferred` | Source, config or a scan showed it | the source manifest, `build.gradle`, `scan_source.py`, `check_pins.py --nsc` alone |
+| `manual` | Nothing has exercised it yet | server-side auth, IDOR, hooking, runtime behaviour |
 
-**Questions**
-
-```
-Explain MASWE-0006 for a React Native app and show me how to check it in our build.
-Which MASWE weaknesses fall under MASVS-NETWORK-1, and which ones do we fail?
-```
-
-**Tips**
-
-- **Give it the built app when you can.** Without an APK or IPA, build-only checks come back as `Not run`, and nothing can be marked `Fixed` or `Already mitigated`.
-- **Don't ask for a clean sheet.** The skill won't mark something fixed without verified evidence, even when asked. That protects you when the pentester retests.
-- **Name the flavor or environment** (dev, UAT, prod) if your app has several. Settings often differ between them.
-- **Say when a fix changes UX or the backend** (forced re-login, pin rotation). The skill proposes these and waits for your sign-off instead of applying them.
+The six statuses are `Open`, `Fixed`, `Already mitigated`, `False positive`, `Risk accepted` and `Not run`. `make_report.py` rejects `Fixed` and `Already mitigated` without verified evidence, `Fixed` without a `retest_build`, and `False positive` with only manual evidence. The pass/fail mapping and severity scale are summarised in [docs/REFERENCE.md](docs/REFERENCE.md#evidence-status-and-severity); [skills/masvs/SKILL.md](skills/masvs/SKILL.md) is the authoritative source.
 
 ## Requirements
 
-- Python 3.9 or newer, standard library only at runtime.
-- Optional: `openpyxl`, needed only for .xlsx output (CSV is written without it). The tests use it too.
-- `openssl` for certificate checks.
-- Android build-tools `aapt2` for APK checks (found automatically in the Android SDK).
-- macOS `otool` and `plutil` for IPA checks.
+| Need | For | Without it |
+|---|---|---|
+| Python 3.9+ | Every script (standard library only) | Nothing runs. |
+| `openpyxl` (optional) | `report.xlsx` | `make_report.py` writes `report.csv` instead. |
+| `openssl` | `check_pins.py --host` and `--chain` (SPKI hashes) | Those modes return `{"skipped": ...}`; `--nsc` alone still works. |
+| Android SDK `aapt2` or `apkanalyzer` | `inspect_apk.py` | APK checks return `{"skipped": ...}` and are reported as `Not run`. Found on `PATH`, under `ANDROID_HOME`/`ANDROID_SDK_ROOT`, or in the default SDK locations. |
+| macOS with `otool`, `plutil`, `unzip` | `inspect_ipa.py` | IPA checks return `{"skipped": ...}` and are reported as `Not run`. |
+| `zip` | `scripts/package.sh` (maintainers only) | Packaging the release zip fails. |
 
-A missing tool never fails a run. The script exits 0 with `{"skipped": "<reason>"}` and the report lists that check as `Not run`.
+A missing tool never fails a run: the script exits 0 with `{"skipped": "<reason>"}` and the check is listed as `Not run` with that reason.
 
-## Example output
+## Documentation
 
-An excerpt of `report.md` (fake data):
+| Document | What's in it |
+|---|---|
+| [docs/USAGE.md](docs/USAGE.md) | Every way to run the skill, prompt examples per mode, headless runs, running the scripts directly, a CI example |
+| [docs/REFERENCE.md](docs/REFERENCE.md) | Script CLIs and output keys, exit codes, the `findings.json` format and validation rules, scanner behaviour, data files |
+| [docs/TROUBLESHOOTING.md](docs/TROUBLESHOOTING.md) | Symptoms, causes and fixes |
+| [CONTRIBUTING.md](CONTRIBUTING.md) | Adding a scan rule, releases, regenerating the MASWE catalog |
+| [evals/README.md](evals/README.md) | Pressure scenarios for testing the skill itself |
 
-| Finding | MASVS Control | MASWE | Severity | Status | Evidence |
-|---|---|---|---|---|---|
-| Backups enabled | MASVS-STORAGE-2 | MASWE-0006 (Sensitive Data Not Excluded From Backup) | Medium | Open | [verified] allow_backup: true in the built APK |
-| Cleartext traffic allowed | MASVS-NETWORK-1 | MASWE-0026 (Network Traffic Not Encrypted) | Medium | Open | [inferred] debug network config only, release not checked |
-| Plugin external-storage call | MASVS-STORAGE-1 | MASWE-0002 (Sensitive Data Stored Unencrypted Outside of Private Storage) | Info | False positive | [inferred] match is inside a third-party package |
-| Root detection bypass | MASVS-RESILIENCE-1 | MASWE-0051 (Root/Jailbreak Detection Not Implemented) | Medium | Not run | [manual] needs a device and a hooking test |
+## Coverage
 
-## MASVS, MASWE and MASTG
+- **MASVS v2.1.0**: all 24 controls across the eight groups (STORAGE, CRYPTO, AUTH, NETWORK, PLATFORM, CODE, RESILIENCE, PRIVACY).
+- **MASWE v1.0.0**: all 78 weaknesses, with requirement, platforms, CWE, modes of introduction and mitigations. The catalog is generated from the [OWASP/maswe](https://github.com/OWASP/maswe) release tag, not edited by hand.
+- **MASTG**: candidate tests for each control, linked through shared MASWE IDs. Claude cites one only after reading it and confirming it applies.
+- **Scan rules**: 52 rules in [skills/masvs/data/rules.json](skills/masvs/data/rules.json).
 
-- **MASVS** v2.1.0: the 24 controls a finding is filed under.
-- **MASWE** v1.0.0: all 78 weaknesses, with requirement, modes of introduction and mitigations (`skills/masvs/data/maswe.json`). Scan rules carry a default MASWE ID, and `make_report.py` rejects unknown IDs and warns when an ID doesn't belong to the finding's control.
-- **MASTG**: candidate tests per control, to read before citing.
+  | Stack | Rules |
+  |---|---|
+  | Android | 19 |
+  | Flutter | 11 |
+  | iOS | 7 |
+  | React Native | 4 |
+  | Any stack (`*`: committed secrets, keystores, service-account keys) | 11 |
 
-## Evidence and pass/fail
+> [!NOTE]
+> **One weakness, several controls.** The MASWE index on mas.owasp.org lists each weakness under one primary control, but many weaknesses map to several controls through their `masvs-v2` mappings. For example, MASWE-0018 is filed under MASVS-AUTH-1 and also maps to MASVS-PLATFORM-1 and MASVS-STORAGE-2. The skill uses the full mapping, so `make_report.py` accepts MASVS-PLATFORM-1 with MASWE-0018 without a warning. MASWE profiles (L1, L2, R, P, EUDIW) are not used yet.
 
-Every status carries an evidence kind: `verified` (a script or command on a built artifact or live endpoint showed it), `inferred` (source, config or a scan showed it) or `manual` (nothing has exercised it yet).
-`Fixed` and `Already mitigated` are only accepted with verified evidence; scan-only results stay `Open` or `Not run`.
-The pass/fail mapping, severity scale and statuses are defined once in `skills/masvs/SKILL.md`.
+## Privacy
+
+The scripts run on your machine and make no network calls, except `check_pins.py --host`, which opens a TLS connection to the host you name. Known token formats (AWS, GitHub, GitLab, Google, Slack, Stripe, JWT, private keys) and long quoted literals are redacted to their first 4 characters in the JSON, Markdown and spreadsheet output. Claude is instructed never to output a secret's value, and to keep client data (hostnames, bundle IDs, pins, app names) out of web searches.
 
 ## Updating
 
-Plugin: run `/plugin marketplace update masvs-skill`, then restart Claude Code. Zip install: replace the `masvs/` folder with the one from the newer zip. The version is in `.claude-plugin/plugin.json` and in `metadata.version` in `skills/masvs/SKILL.md`.
+Plugin install: refresh the marketplace, then update the plugin.
 
-## Tests and evals
+```text
+/plugin marketplace update masvs-skill
+```
+
+Then update `masvs` from `/plugin` → **Installed**, or from a shell:
+
+```bash
+claude plugin update masvs@masvs-skill
+```
+
+Zip install: replace the `masvs/` folder with the one from the newer zip.
+
+The version is in [.claude-plugin/plugin.json](.claude-plugin/plugin.json) and in `metadata.version` in [skills/masvs/SKILL.md](skills/masvs/SKILL.md).
+
+## Development
 
 ```bash
 python3 -m venv .venv && .venv/bin/pip install pytest openpyxl
@@ -141,12 +193,10 @@ MASVS_DENYLIST="word1,word2" .venv/bin/pytest -q tests/test_references.py   # no
 scripts/package.sh                                                          # writes dist/masvs-<version>.zip
 ```
 
-Pressure scenarios and fixtures for the skill itself are in `evals/` (see `evals/README.md`). To add a rule, see `CONTRIBUTING.md`.
+To add a scan rule or cut a release, see [CONTRIBUTING.md](CONTRIBUTING.md). To test the skill's behaviour under pressure, see [evals/README.md](evals/README.md).
 
 ## Attribution
 
-Content is based on OWASP MASVS, MASTG and MASWE (CC BY-SA 4.0). Control summaries are paraphrased; the MASWE catalog quotes weakness titles and requirements. See `NOTICE`. The skill's own code is Apache-2.0 (`LICENSE`).
+Control IDs, summaries and links come from [OWASP MASVS](https://mas.owasp.org/MASVS/), [MASTG](https://mas.owasp.org/MASTG/) and [MASWE](https://mas.owasp.org/MASWE/), licensed CC BY-SA 4.0. Control summaries are paraphrased; MASWE titles and requirements are quoted. See [NOTICE](NOTICE). The skill's own code is Apache-2.0 ([LICENSE](LICENSE)).
 
-## Privacy
-
-The scripts run locally and make no network calls, except `check_pins.py --host`, which connects to the host you name. Known token formats and long quoted literals are redacted to their first 4 characters in the JSON, Markdown and xlsx output.
+This project is not affiliated with or endorsed by OWASP.
